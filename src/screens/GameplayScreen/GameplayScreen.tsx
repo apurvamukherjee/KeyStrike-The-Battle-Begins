@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
 import { WordRunner, gradeForAccuracy } from '../../engine/chartEngine';
+import { scaleSongTiming } from '../../engine/songBuilder';
 import type { Judgement, RunResult } from '../../types/game';
 import type { Difficulty } from '../../types/song';
 import { recordScoreIfBest } from '../../utils/highScores';
+import { recordRun } from '../../utils/stats';
 import { formatScore } from '../../utils/format';
-import { getInputOffsetMs, getVolume } from '../../utils/settings';
+import { getGameSpeed, getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import WordStage from './WordStage';
 import './GameplayScreen.css';
@@ -48,13 +50,19 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
   const [paused, setPausedState] = useState(false);
   const [progress, setProgressState] = useState(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [needsKeyboard] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  );
 
   useEffect(() => {
-    const song = getSongById(songId);
-    if (!song) {
+    if (needsKeyboard) return;
+
+    const baseSong = getSongById(songId);
+    if (!baseSong) {
       onQuit();
       return;
     }
+    const song = scaleSongTiming(baseSong, getGameSpeed());
 
     const ctx = getAudioContext();
     ctx.resume().catch(() => {});
@@ -94,6 +102,12 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       const accuracy = runner.accuracy;
       const grade = gradeForAccuracy(accuracy);
       const isNewBest = recordScoreIfBest(songId, difficulty, { score: runner.score, accuracy, grade });
+
+      const longestCleared = runner.words
+        .filter((w) => w.judgement === 'perfect' || w.judgement === 'good')
+        .reduce((longest, w) => (w.note.word.length > longest.length ? w.note.word : longest), '');
+      recordRun({ maxCombo: runner.maxCombo, score: runner.score, counts: runner.counts }, longestCleared);
+
       onFinish({
         songId,
         difficulty,
@@ -217,7 +231,26 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId, difficulty]);
+  }, [songId, difficulty, needsKeyboard]);
+
+  if (needsKeyboard) {
+    return (
+      <div className="screen">
+        <h1 className="wordmark wordmark--small">Keyboard Required</h1>
+        <div className="panel">
+          <p className="gameplay-no-keyboard__copy">
+            KeyStrike is a typing game — you'll need a physical keyboard to play. Menus and stats work fine on
+            touch, but words can't be typed without one.
+          </p>
+        </div>
+        <div className="cap-row">
+          <button type="button" className="cap cap--primary" onClick={onQuit}>
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="screen gameplay-screen">

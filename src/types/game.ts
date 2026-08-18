@@ -26,5 +26,5 @@ export type ScreenState =
   | { name: 'settings'; from: 'home' }
   | { name: 'stats' }
   | { name: 'playing'; songId: string; difficulty: Difficulty }
-  | { name: 'practice'; songId: string }
+  | { name: 'practice'; songId: string; difficulty: Difficulty }
   | { name: 'results'; result: RunResult };

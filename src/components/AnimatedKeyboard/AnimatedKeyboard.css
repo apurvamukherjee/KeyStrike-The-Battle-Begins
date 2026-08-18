@@ -68,3 +68,7 @@
     animation: none;
   }
 }
+
+:root[data-reduce-motion='true'] .akb--idle .akb__key {
+  animation: none;
+}

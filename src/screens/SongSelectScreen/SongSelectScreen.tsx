@@ -6,6 +6,7 @@ import './SongSelectScreen.css';
 
 interface SongSelectScreenProps {
   onSelect: (songId: string, difficulty: Difficulty) => void;
+  onPractice: (songId: string, difficulty: Difficulty) => void;
   onBack: () => void;
 }
 
@@ -15,7 +16,7 @@ const DIFFICULTY_LABEL: Record<Difficulty, string> = {
   hard: 'Hard',
 };
 
-export default function SongSelectScreen({ onSelect, onBack }: SongSelectScreenProps) {
+export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongSelectScreenProps) {
   const [index, setIndex] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const cycleDifficulty = (dir: 1 | -1) => {
@@ -29,13 +30,15 @@ export default function SongSelectScreen({ onSelect, onBack }: SongSelectScreenP
       else if (e.code === 'ArrowUp') setIndex((i) => Math.max(0, i - 1));
       else if (e.code === 'ArrowRight') cycleDifficulty(1);
       else if (e.code === 'ArrowLeft') cycleDifficulty(-1);
-      else if (e.code === 'Enter' || e.code === 'NumpadEnter') onSelect(songs[index].id, difficulty);
-      else if (e.code === 'Escape') onBack();
+      else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+        if (e.shiftKey) onPractice(songs[index].id, difficulty);
+        else onSelect(songs[index].id, difficulty);
+      } else if (e.code === 'Escape') onBack();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, difficulty, onSelect, onBack]);
+  }, [index, difficulty, onSelect, onPractice, onBack]);
 
   return (
     <div className="screen">
@@ -89,6 +92,9 @@ export default function SongSelectScreen({ onSelect, onBack }: SongSelectScreenP
       <div className="cap-row">
         <button type="button" className="cap cap--primary" onClick={() => onSelect(songs[index].id, difficulty)}>
           Play
+        </button>
+        <button type="button" className="cap" onClick={() => onPractice(songs[index].id, difficulty)}>
+          Practice
         </button>
         <button type="button" className="cap" onClick={onBack}>
           Back

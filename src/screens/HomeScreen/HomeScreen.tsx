@@ -4,9 +4,10 @@ import './HomeScreen.css';
 interface HomeScreenProps {
   onPlay: () => void;
   onSettings: () => void;
+  onStats: () => void;
 }
 
-export default function HomeScreen({ onPlay, onSettings }: HomeScreenProps) {
+export default function HomeScreen({ onPlay, onSettings, onStats }: HomeScreenProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === 'Enter' || e.code === 'NumpadEnter') onPlay();
@@ -20,11 +21,14 @@ export default function HomeScreen({ onPlay, onSettings }: HomeScreenProps) {
       <h1 className="wordmark">
         Key<span>Strike</span>
       </h1>
-      <p className="tagline">Type to the beat. Own the highway.</p>
+      <p className="tagline">Type to the beat. Beat the clock.</p>
 
       <div className="cap-row">
         <button type="button" className="cap cap--primary" onClick={onPlay} autoFocus>
           Play
+        </button>
+        <button type="button" className="cap" onClick={onStats}>
+          Stats
         </button>
         <button type="button" className="cap" onClick={onSettings}>
           Settings
@@ -33,9 +37,7 @@ export default function HomeScreen({ onPlay, onSettings }: HomeScreenProps) {
 
       <div className="panel home__hint">
         <h2 className="home__hint-title">How to play</h2>
-        <p>
-          Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> as the notes cross the line.
-        </p>
+        <p>Type each word before its timer runs out — every correct letter locks in, wrong ones are ignored.</p>
         <p>
           <kbd>Esc</kbd> pauses mid-song.
         </p>

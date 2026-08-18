@@ -1,0 +1,57 @@
+.stats__panel {
+  width: min(30rem, 100%);
+}
+
+.stats__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem 1.5rem;
+}
+
+.stats__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stats__label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.stats__value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--ink-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__value--word {
+  font-size: 1.125rem;
+  letter-spacing: 0.05em;
+  color: var(--red-400);
+}
+
+.stats__counts {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+}
+
+.stats__count--perfect {
+  color: var(--red-400);
+}
+
+.stats__count--good {
+  color: var(--ink);
+}
+
+.stats__count--miss {
+  color: var(--ink-faint);
+}

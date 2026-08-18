@@ -136,3 +136,52 @@ export function buildWordSong(src: WordSongSource): SongDefinition {
     tracks,
   };
 }
+
+/**
+ * Returns a copy of `song` with every timestamp divided by `factor` — factor
+ * 0.5 plays everything back at half speed (twice the wall-clock time to reach
+ * each word/note), factor 2 doubles the pace. Since every note is synthesized
+ * rather than a decoded audio file, this changes tempo without pitch-shifting.
+ * Used for both the "Game speed" accessibility setting and Practice mode.
+ */
+export function scaleSongTiming(song: SongDefinition, factor: number): SongDefinition {
+  if (factor === 1) return song;
+  const scale = (t: number) => t / factor;
+
+  const charts = Object.fromEntries(
+    Object.entries(song.charts).map(([difficulty, notes]) => [
+      difficulty,
+      notes.map((n) => ({ ...n, time: scale(n.time) })),
+    ])
+  ) as SongDefinition['charts'];
+
+  const tracks = song.tracks.map((track) => ({
+    ...track,
+    notes: track.notes.map((n) => ({ ...n, time: scale(n.time), duration: scale(n.duration) })),
+  }));
+
+  return { ...song, charts, tracks, durationSec: scale(song.durationSec) };
+}
+
+/**
+ * Returns a copy of `song` covering only `[start, end)` of the given
+ * difficulty's chart (and the backing tracks), re-based so the window starts
+ * at time 0. Used by Practice mode to loop a section — other difficulties'
+ * charts are left untouched since only one is ever in play at a time.
+ */
+export function sliceSong(song: SongDefinition, difficulty: Difficulty, start: number, end: number): SongDefinition {
+  const shift = (t: number) => t - start;
+  const inWindow = (t: number) => t >= start && t < end;
+
+  const charts: SongDefinition['charts'] = {
+    ...song.charts,
+    [difficulty]: song.charts[difficulty].filter((n) => inWindow(n.time)).map((n) => ({ ...n, time: shift(n.time) })),
+  };
+
+  const tracks = song.tracks.map((track) => ({
+    ...track,
+    notes: track.notes.filter((n) => inWindow(n.time)).map((n) => ({ ...n, time: shift(n.time) })),
+  }));
+
+  return { ...song, charts, tracks, durationSec: end - start };
+}

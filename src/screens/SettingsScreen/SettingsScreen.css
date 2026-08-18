@@ -2,9 +2,65 @@
   width: min(28rem, 100%);
 }
 
+.settings__panel + .settings__panel {
+  margin-top: 1rem;
+}
+
 .settings__hint {
-  margin: 1.5rem 0 0;
+  margin: 0.5rem 0 1.5rem;
   font-size: 0.8125rem;
   line-height: 1.7;
   color: var(--ink-faint);
+}
+
+.settings__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings__toggle-row + .settings__toggle-row {
+  margin-top: 1.25rem;
+}
+
+.settings__toggle-label {
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.settings__toggle {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.settings__toggle-option {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.settings__toggle-option:hover {
+  color: var(--ink-bright);
+}
+
+.settings__toggle-option--active {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+  color: var(--ink-bright);
 }

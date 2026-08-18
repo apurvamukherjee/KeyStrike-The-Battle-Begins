@@ -264,3 +264,12 @@ kbd {
     animation: none;
   }
 }
+
+/* Same as the media query above, but for the in-app "Reduce motion" toggle
+   in Settings — CSS can't OR a media query with an attribute selector, so
+   this is a deliberate duplicate rather than a replacement for it. */
+:root[data-reduce-motion='true'] .screen,
+:root[data-reduce-motion='true'] .backdrop,
+:root[data-reduce-motion='true'] .backdrop::after {
+  animation: none;
+}

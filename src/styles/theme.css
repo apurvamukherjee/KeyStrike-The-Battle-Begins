@@ -31,4 +31,16 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --gutter: clamp(1rem, 4vw, 2.5rem);
+  --text-scale: 1;
+}
+
+/* Colorblind-safe alternate: amber instead of red, avoiding the classic
+   red/green confusion pair while staying a one-accent black+X identity. */
+:root[data-palette='alt'] {
+  --red-500: #e0951a;
+  --red-400: #ffb64d;
+  --red-600: #b36e0f;
+  --red-glow: rgba(224, 149, 26, 0.45);
+  --red-wash: rgba(224, 149, 26, 0.12);
+  --perfect: #ffb64d;
 }

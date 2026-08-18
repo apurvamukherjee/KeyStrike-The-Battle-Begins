@@ -1,0 +1,29 @@
+.practice-hud {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.practice-hud__item {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.practice-controls-hint {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+.practice-controls-hint kbd {
+  margin: 0 0.15em;
+}
