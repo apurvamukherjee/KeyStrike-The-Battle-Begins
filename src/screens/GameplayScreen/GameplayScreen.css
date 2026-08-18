@@ -66,6 +66,81 @@
   gap: clamp(1rem, 4vh, 2rem);
 }
 
+.gameplay-body--shake {
+  animation: gameplay-shake 320ms ease;
+}
+
+@keyframes gameplay-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+/* Visually hidden but focusable and interactable — summons the mobile OS
+   keyboard. font-size must stay >= 16px or iOS Safari auto-zooms the page
+   on focus regardless of how small the box itself looks. */
+.gameplay-mobile-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0.01;
+  font-size: 16px;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+}
+
+.gameplay-milestone {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--red-400);
+  text-shadow: 0 0 18px var(--red-glow);
+  pointer-events: none;
+  animation: milestone-pop 900ms ease-out forwards;
+}
+
+@keyframes milestone-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.05);
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(1);
+  }
+}
+
 .gameplay-judgement {
   position: absolute;
   left: 50%;
@@ -117,11 +192,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gameplay-judgement {
+  .gameplay-judgement,
+  .gameplay-body--shake,
+  .gameplay-milestone {
     animation: none;
   }
 }
 
-:root[data-reduce-motion='true'] .gameplay-judgement {
+:root[data-reduce-motion='true'] .gameplay-judgement,
+:root[data-reduce-motion='true'] .gameplay-body--shake,
+:root[data-reduce-motion='true'] .gameplay-milestone {
   animation: none;
 }

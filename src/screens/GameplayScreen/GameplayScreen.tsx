@@ -16,6 +16,8 @@ import './GameplayScreen.css';
 const COUNTDOWN_SEC = 2;
 const QUEUE_PREVIEW = 3;
 const LETTER_RE = /^[a-zA-Z]$/;
+const COMBO_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500];
+const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 interface GameplayScreenProps {
   songId: string;
@@ -30,6 +32,9 @@ interface HudState {
   accuracy: number;
   lastJudgement: Judgement | null;
   judgementSeq: number;
+  shakeSeq: number;
+  milestone: number | null;
+  milestoneSeq: number;
 }
 
 interface StageState {
@@ -40,22 +45,30 @@ interface StageState {
   upcoming: string[];
 }
 
-const INITIAL_HUD: HudState = { score: 0, combo: 0, accuracy: 100, lastJudgement: null, judgementSeq: 0 };
+const INITIAL_HUD: HudState = {
+  score: 0,
+  combo: 0,
+  accuracy: 100,
+  lastJudgement: null,
+  judgementSeq: 0,
+  shakeSeq: 0,
+  milestone: null,
+  milestoneSeq: 0,
+};
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
 export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }: GameplayScreenProps) {
   const actionsRef = useRef({ togglePause: () => {}, quit: () => {} });
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [paused, setPausedState] = useState(false);
   const [progress, setProgressState] = useState(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [needsKeyboard] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
-  );
+  const [mobileStarted, setMobileStarted] = useState(!IS_TOUCH);
 
   useEffect(() => {
-    if (needsKeyboard) return;
+    if (!mobileStarted) return;
 
     const baseSong = getSongById(songId);
     if (!baseSong) {
@@ -84,11 +97,15 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
     let finished = false;
     let isPaused = false;
     let raf = 0;
+    let comboMilestonesHit = 0;
+    let mobileKeyFlashTimer = 0;
 
     function teardown() {
       cancelAnimationFrame(raf);
+      window.clearTimeout(mobileKeyFlashTimer);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      mobileInputRef.current?.removeEventListener('input', onMobileInput);
       document.removeEventListener('visibilitychange', onVisibility);
     }
 
@@ -139,25 +156,23 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
     actionsRef.current = { togglePause: () => setPaused(!isPaused), quit };
 
     function bumpHud(judgement: Judgement) {
+      const milestoneIndex = COMBO_MILESTONES.indexOf(runner.combo);
+      const hitNewMilestone = judgement !== 'miss' && milestoneIndex !== -1 && milestoneIndex >= comboMilestonesHit;
+      if (hitNewMilestone) comboMilestonesHit = milestoneIndex + 1;
+
       setHud((h) => ({
         score: runner.score,
         combo: runner.combo,
         accuracy: runner.accuracy,
         lastJudgement: judgement,
         judgementSeq: h.judgementSeq + 1,
+        shakeSeq: judgement === 'miss' ? h.shakeSeq + 1 : h.shakeSeq,
+        milestone: hitNewMilestone ? runner.combo : h.milestone,
+        milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
       }));
     }
 
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.code === 'Escape') {
-        setPaused(!isPaused);
-        return;
-      }
-      if (isPaused || e.repeat || !LETTER_RE.test(e.key)) return;
-
-      const letter = e.key.toUpperCase();
-      setActiveKey(letter);
-
+    function processLetter(letter: string) {
       const rawSongTime = ctx.currentTime - startAt;
       const judgeTime = rawSongTime - offsetSec;
       const result = runner.handleKey(letter, judgeTime);
@@ -170,18 +185,50 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       }
     }
 
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code === 'Escape') {
+        setPaused(!isPaused);
+        return;
+      }
+      if (isPaused || e.repeat || !LETTER_RE.test(e.key)) return;
+      const letter = e.key.toUpperCase();
+      setActiveKey(letter);
+      processLetter(letter);
+    }
+
     function onKeyUp(e: KeyboardEvent) {
       if (!LETTER_RE.test(e.key)) return;
       const letter = e.key.toUpperCase();
       setActiveKey((k) => (k === letter ? null : k));
     }
 
+    // Mobile virtual keyboards don't reliably fire usable `keydown.key` values
+    // (iOS Safari especially), so on touch devices a hidden, always-focused
+    // text input drives the same processLetter() pipeline via its value diff.
+    function onMobileInput(e: Event) {
+      const target = e.target as HTMLInputElement;
+      const value = target.value;
+      target.value = '';
+      if (isPaused || value.length === 0) return;
+      const letter = value[value.length - 1].toUpperCase();
+      if (!LETTER_RE.test(letter)) return;
+      setActiveKey(letter);
+      window.clearTimeout(mobileKeyFlashTimer);
+      mobileKeyFlashTimer = window.setTimeout(() => setActiveKey(null), 150);
+      processLetter(letter);
+    }
+
     function onVisibility() {
       if (document.hidden && !isPaused) setPaused(true);
     }
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    if (IS_TOUCH) {
+      mobileInputRef.current?.addEventListener('input', onMobileInput);
+      mobileInputRef.current?.focus();
+    } else {
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+    }
     document.addEventListener('visibilitychange', onVisibility);
 
     function loop() {
@@ -231,20 +278,31 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId, difficulty, needsKeyboard]);
+  }, [songId, difficulty, mobileStarted]);
 
-  if (needsKeyboard) {
+  if (IS_TOUCH && !mobileStarted) {
     return (
       <div className="screen">
-        <h1 className="wordmark wordmark--small">Keyboard Required</h1>
+        <h1 className="wordmark wordmark--small">Tap to Start</h1>
         <div className="panel">
           <p className="gameplay-no-keyboard__copy">
-            KeyStrike is a typing game — you'll need a physical keyboard to play. Menus and stats work fine on
-            touch, but words can't be typed without one.
+            KeyStrike is a typing game — tapping below opens your keyboard so you can type each word as it
+            appears.
           </p>
         </div>
         <div className="cap-row">
-          <button type="button" className="cap cap--primary" onClick={onQuit}>
+          <button
+            type="button"
+            className="cap cap--primary"
+            onClick={() => {
+              getAudioContext().resume().catch(() => {});
+              setMobileStarted(true);
+              window.setTimeout(() => mobileInputRef.current?.focus(), 50);
+            }}
+          >
+            Tap to Start
+          </button>
+          <button type="button" className="cap" onClick={onQuit}>
             Back
           </button>
         </div>
@@ -254,6 +312,21 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
 
   return (
     <div className="screen gameplay-screen">
+      {IS_TOUCH && (
+        <input
+          ref={mobileInputRef}
+          className="gameplay-mobile-input"
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
+
       <div className="gameplay-hud">
         <div className="gameplay-hud__stat">
           <span className="gameplay-hud__label">Score</span>
@@ -273,7 +346,10 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
         <div className="gameplay-progress__fill" style={{ width: `${progress * 100}%` }} />
       </div>
 
-      <div className="gameplay-body">
+      <div
+        className={`gameplay-body${hud.shakeSeq > 0 ? ' gameplay-body--shake' : ''}`}
+        key={hud.shakeSeq}
+      >
         <WordStage
           word={stage.word}
           typed={stage.typed}
@@ -281,14 +357,17 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
           overtime={stage.overtime}
           upcoming={stage.upcoming}
         />
-        <AnimatedKeyboard mode="live" activeKey={activeKey} />
+        {!IS_TOUCH && <AnimatedKeyboard mode="live" activeKey={activeKey} />}
 
         {hud.lastJudgement && (
-          <div
-            key={hud.judgementSeq}
-            className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}
-          >
+          <div key={hud.judgementSeq} className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}>
             {hud.lastJudgement.toUpperCase()}
+          </div>
+        )}
+
+        {hud.milestone && (
+          <div key={hud.milestoneSeq} className="gameplay-milestone">
+            {hud.milestone}x COMBO
           </div>
         )}
       </div>

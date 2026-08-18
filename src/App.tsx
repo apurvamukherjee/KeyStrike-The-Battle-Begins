@@ -7,6 +7,7 @@ import GameplayScreen from './screens/GameplayScreen/GameplayScreen';
 import ResultsScreen from './screens/ResultsScreen/ResultsScreen';
 import StatsScreen from './screens/StatsScreen/StatsScreen';
 import PracticeScreen from './screens/PracticeScreen/PracticeScreen';
+import FullscreenButton from './components/FullscreenButton/FullscreenButton';
 import type { RunResult, ScreenState } from './types/game';
 import type { Difficulty } from './types/song';
 import { applyAppearanceSettings } from './utils/settings';
@@ -55,6 +56,9 @@ export default function App() {
   return (
     <>
       <div className="backdrop" aria-hidden="true" />
+      <div className="app-corner-controls">
+        <FullscreenButton />
+      </div>
 
       {screen.name === 'loader' && <LoaderScreen onDone={() => dispatch({ type: 'LOADED' })} />}
 
