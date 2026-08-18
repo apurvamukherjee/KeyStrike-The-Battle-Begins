@@ -1,0 +1,15 @@
+{
+  "name": "keystrike-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "KeyStrike battle relay — rooms, a synchronized start signal, and live race-progress broadcast. No accounts, no database.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}

@@ -1,4 +1,6 @@
 import type { Difficulty } from './song';
+import type { RoomClient } from '../multiplayer/RoomClient';
+import type { RoomState } from '../multiplayer/types';
 
 export type Judgement = 'perfect' | 'good' | 'miss';
 
@@ -27,4 +29,8 @@ export type ScreenState =
   | { name: 'stats' }
   | { name: 'playing'; songId: string; difficulty: Difficulty }
   | { name: 'practice'; songId: string; difficulty: Difficulty }
-  | { name: 'results'; result: RunResult };
+  | { name: 'results'; result: RunResult }
+  | { name: 'lobby' }
+  | { name: 'room'; client: RoomClient; room: RoomState }
+  | { name: 'battle'; client: RoomClient; room: RoomState }
+  | { name: 'battleResults'; client: RoomClient; room: RoomState };

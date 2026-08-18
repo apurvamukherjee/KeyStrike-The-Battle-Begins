@@ -5,9 +5,10 @@ interface HomeScreenProps {
   onPlay: () => void;
   onSettings: () => void;
   onStats: () => void;
+  onBattle: () => void;
 }
 
-export default function HomeScreen({ onPlay, onSettings, onStats }: HomeScreenProps) {
+export default function HomeScreen({ onPlay, onSettings, onStats, onBattle }: HomeScreenProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === 'Enter' || e.code === 'NumpadEnter') onPlay();
@@ -26,6 +27,9 @@ export default function HomeScreen({ onPlay, onSettings, onStats }: HomeScreenPr
       <div className="cap-row">
         <button type="button" className="cap cap--primary" onClick={onPlay} autoFocus>
           Play
+        </button>
+        <button type="button" className="cap" onClick={onBattle}>
+          Battle
         </button>
         <button type="button" className="cap" onClick={onStats}>
           Stats

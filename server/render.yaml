@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: keystrike-battle-server
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    # Render injects PORT automatically at runtime; index.js already reads
+    # process.env.PORT with a local fallback, so nothing to set here.

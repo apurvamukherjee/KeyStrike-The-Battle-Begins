@@ -1,0 +1,59 @@
+.battle-results__winner {
+  margin: -1rem 0 0;
+  color: var(--red-400);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px var(--red-glow);
+}
+
+.battle-results__panel {
+  width: min(30rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.battle-results__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.battle-results__row--winner {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+}
+
+.battle-results__place {
+  width: 2.5rem;
+  flex: 0 0 auto;
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+
+.battle-results__row--winner .battle-results__place {
+  color: var(--red-400);
+}
+
+.battle-results__name {
+  flex: 1 1 auto;
+  font-weight: 600;
+  color: var(--ink-bright);
+}
+
+.battle-results__score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink-bright);
+}
+
+.battle-results__accuracy {
+  width: 4rem;
+  text-align: right;
+  color: var(--ink-dim);
+  font-size: 0.875rem;
+}

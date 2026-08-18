@@ -126,6 +126,8 @@ a {
   padding: var(--gutter);
   gap: clamp(1.5rem, 4vh, 2.5rem);
   animation: screen-in 220ms ease both;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @keyframes screen-in {
@@ -237,6 +239,44 @@ kbd {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.75rem;
+}
+
+/* ------------------------------------------------------- segmented picker */
+
+.difficulty-picker {
+  display: flex;
+  gap: 0.4rem;
+  margin: -0.5rem 0 0;
+}
+
+.difficulty-picker__option {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.difficulty-picker__option:hover {
+  border-color: var(--line-strong);
+  color: var(--ink-bright);
+}
+
+.difficulty-picker__option--active {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+  color: var(--ink-bright);
 }
 
 /* ---------------------------------------------------------------- panel */
