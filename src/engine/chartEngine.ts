@@ -5,7 +5,10 @@ import type { Judgement, JudgementCounts } from '../types/game';
 export const GOOD_GRACE = 0.5;
 const LENGTH_BONUS_PER_LETTER = 5;
 
-export type KeyResult = 'progress' | 'wordComplete' | 'ignored';
+export type KeyResult =
+  | { type: 'ignored' }
+  | { type: 'progress' }
+  | { type: 'wordComplete'; judgement: Judgement };
 
 interface WordNoteState {
   note: WordNote;
@@ -65,22 +68,22 @@ export class WordRunner {
     return Math.min(4, 1 + Math.floor(this.combo / 15) * 0.5);
   }
 
-  /** Call on every single-letter keydown. Returns what happened, or 'ignored' for a wrong letter or no active word. */
+  /** Call on every single-letter keydown. */
   handleKey(letter: string, songTime: number): KeyResult {
     const state = this.activeWord;
-    if (!state) return 'ignored';
+    if (!state) return { type: 'ignored' };
 
     const expected = state.note.word[state.typed];
-    if (!expected || letter.toUpperCase() !== expected) return 'ignored';
+    if (!expected || letter.toUpperCase() !== expected) return { type: 'ignored' };
 
     state.typed++;
-    if (state.typed < state.note.word.length) return 'progress';
+    if (state.typed < state.note.word.length) return { type: 'progress' };
 
-    this.resolve(state, songTime);
-    return 'wordComplete';
+    const judgement = this.resolve(state, songTime);
+    return { type: 'wordComplete', judgement };
   }
 
-  private resolve(state: WordNoteState, completionTime: number) {
+  private resolve(state: WordNoteState, completionTime: number): Judgement {
     const judgement: Judgement = completionTime <= state.note.time ? 'perfect' : 'good';
     state.judgement = judgement;
     this.counts[judgement]++;
@@ -89,18 +92,21 @@ export class WordRunner {
     const base = (judgement === 'perfect' ? 100 : 50) + state.note.word.length * LENGTH_BONUS_PER_LETTER;
     this.score += base * this.multiplier();
     this.activeIndex++;
+    return judgement;
   }
 
-  /** Call every frame with the current song time — the active word becomes a Miss once its grace period elapses. */
-  sweepMisses(songTime: number) {
+  /** Call every frame with the current song time. Returns true if the active word just became a Miss. */
+  sweepMisses(songTime: number): boolean {
     const state = this.activeWord;
-    if (!state) return;
+    if (!state) return false;
     if (songTime - state.note.time > GOOD_GRACE) {
       state.judgement = 'miss';
       this.counts.miss++;
       this.combo = 0;
       this.activeIndex++;
+      return true;
     }
+    return false;
   }
 }
 

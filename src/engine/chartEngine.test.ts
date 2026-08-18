@@ -1,93 +1,99 @@
 import { describe, expect, it } from 'vitest';
-import { ChartRunner, gradeForAccuracy, GOOD_WINDOW, PERFECT_WINDOW } from './chartEngine';
-import type { ChartNote } from '../types/song';
+import { WordRunner, gradeForAccuracy, GOOD_GRACE } from './chartEngine';
+import type { WordNote } from '../types/song';
 
-const chart: ChartNote[] = [
-  { time: 1, lane: 0 },
-  { time: 2, lane: 1 },
-  { time: 3, lane: 2 },
+const chart: WordNote[] = [
+  { time: 2, word: 'CAT' },
+  { time: 4, word: 'DOG' },
+  { time: 6, word: 'BIRD' },
 ];
 
-describe('ChartRunner', () => {
-  it('scores a hit within the perfect window as perfect', () => {
-    const runner = new ChartRunner(chart);
-    const judgement = runner.attemptHit(0, 1 + PERFECT_WINDOW / 2);
-    expect(judgement).toBe('perfect');
-    expect(runner.counts.perfect).toBe(1);
-    expect(runner.combo).toBe(1);
+function typeWord(runner: WordRunner, word: string, at: number) {
+  let result;
+  for (const letter of word) {
+    result = runner.handleKey(letter, at);
+  }
+  return result;
+}
+
+describe('WordRunner', () => {
+  it('ignores a wrong letter without advancing progress', () => {
+    const runner = new WordRunner(chart);
+    expect(runner.handleKey('X', 0).type).toBe('ignored');
+    expect(runner.words[0].typed).toBe(0);
   });
 
-  it('scores a hit outside perfect but within the good window as good', () => {
-    const runner = new ChartRunner(chart);
-    const judgement = runner.attemptHit(0, 1 + (PERFECT_WINDOW + GOOD_WINDOW) / 2);
-    expect(judgement).toBe('good');
+  it('is case-insensitive', () => {
+    const runner = new WordRunner(chart);
+    expect(runner.handleKey('c', 0).type).toBe('progress');
+    expect(runner.words[0].typed).toBe(1);
+  });
+
+  it('judges a word finished at or before its deadline as perfect', () => {
+    const runner = new WordRunner(chart);
+    const result = typeWord(runner, 'CAT', 1.5);
+    expect(result).toEqual({ type: 'wordComplete', judgement: 'perfect' });
+    expect(runner.counts.perfect).toBe(1);
+    expect(runner.combo).toBe(1);
+    expect(runner.activeIndex).toBe(1);
+  });
+
+  it('judges a word finished just after its deadline (within grace) as good', () => {
+    const runner = new WordRunner(chart);
+    const result = typeWord(runner, 'CAT', 2.2);
+    expect(result).toEqual({ type: 'wordComplete', judgement: 'good' });
     expect(runner.counts.good).toBe(1);
   });
 
-  it('returns null when nothing is hittable in that lane', () => {
-    const runner = new ChartRunner(chart);
-    expect(runner.attemptHit(3, 1)).toBeNull();
+  it('advances to the next word once the current one completes', () => {
+    const runner = new WordRunner(chart);
+    typeWord(runner, 'CAT', 1);
+    expect(runner.activeWord?.note.word).toBe('DOG');
   });
 
-  it('turns unhit notes into misses once they scroll past the good window', () => {
-    const runner = new ChartRunner(chart);
-    runner.sweepMisses(1 + GOOD_WINDOW + 0.01);
+  it('does not advance on a partially-typed word', () => {
+    const runner = new WordRunner(chart);
+    runner.handleKey('C', 0);
+    runner.handleKey('A', 0);
+    expect(runner.activeWord?.note.word).toBe('CAT');
+    expect(runner.activeIndex).toBe(0);
+  });
+
+  it('sweeps the active word to a miss once its grace period elapses, and resets combo', () => {
+    const runner = new WordRunner(chart);
+    typeWord(runner, 'CAT', 1); // build a combo of 1 first
+    expect(runner.sweepMisses(4 + GOOD_GRACE + 0.01)).toBe(true);
     expect(runner.counts.miss).toBe(1);
     expect(runner.combo).toBe(0);
+    expect(runner.activeWord?.note.word).toBe('BIRD');
   });
 
-  it('never double-judges the same note', () => {
-    const runner = new ChartRunner(chart);
-    runner.attemptHit(0, 1);
-    expect(runner.attemptHit(0, 1.001)).toBeNull();
+  it('sweepMisses is a no-op before the grace period has elapsed', () => {
+    const runner = new WordRunner(chart);
+    expect(runner.sweepMisses(1)).toBe(false);
+    expect(runner.activeIndex).toBe(0);
   });
 
-  it('resets combo on a miss', () => {
-    const runner = new ChartRunner(chart);
-    runner.attemptHit(0, 1);
-    runner.sweepMisses(2 + GOOD_WINDOW + 0.01);
-    expect(runner.combo).toBe(0);
+  it('awards more score for a longer word at the same judgement', () => {
+    const short = new WordRunner([{ time: 2, word: 'CAT' }]);
+    const long = new WordRunner([{ time: 2, word: 'ELEPHANT' }]);
+    typeWord(short, 'CAT', 1);
+    typeWord(long, 'ELEPHANT', 1);
+    expect(long.score).toBeGreaterThan(short.score);
   });
 
-  it('reports 100% accuracy for an empty chart rather than dividing by zero', () => {
-    const runner = new ChartRunner([]);
+  it('reports 100% accuracy and isComplete for an empty chart', () => {
+    const runner = new WordRunner([]);
     expect(runner.accuracy).toBe(100);
     expect(runner.isComplete).toBe(true);
   });
-});
 
-describe('ChartRunner hold notes', () => {
-  const holdChart: ChartNote[] = [{ time: 1, lane: 0, holdSec: 2 }];
-
-  it('judges the head like a tap and keeps the combo while held through', () => {
-    const runner = new ChartRunner(holdChart);
-    expect(runner.attemptHit(0, 1)).toBe('perfect');
-    expect(runner.combo).toBe(1);
-
-    runner.sweepMisses(2); // mid-hold
-    expect(runner.combo).toBe(1); // untouched — still holding, not yet resolved
-
-    runner.releaseLane(0, 3); // released right at the natural end
-    expect(runner.combo).toBe(1); // held through — no penalty
-  });
-
-  it('breaks the combo when the lane is released well before the hold ends', () => {
-    const runner = new ChartRunner(holdChart);
-    runner.attemptHit(0, 1);
-    runner.releaseLane(0, 1.5); // let go after 0.5s of a 2s hold
-    expect(runner.combo).toBe(0);
-  });
-
-  it('does not penalize a release within tolerance of the natural end', () => {
-    const runner = new ChartRunner(holdChart);
-    runner.attemptHit(0, 1);
-    runner.releaseLane(0, 2.98); // hold ends at time 3, within the 0.05s tolerance
-    expect(runner.combo).toBe(1);
-  });
-
-  it('releaseLane is a no-op when the lane has no active hold', () => {
-    const runner = new ChartRunner(holdChart);
-    expect(() => runner.releaseLane(2, 5)).not.toThrow();
+  it('is complete once every word has been judged', () => {
+    const runner = new WordRunner(chart);
+    typeWord(runner, 'CAT', 1);
+    typeWord(runner, 'DOG', 3);
+    typeWord(runner, 'BIRD', 5);
+    expect(runner.isComplete).toBe(true);
   });
 });
 

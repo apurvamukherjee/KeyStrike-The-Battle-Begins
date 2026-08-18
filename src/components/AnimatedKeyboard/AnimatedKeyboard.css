@@ -1,0 +1,70 @@
+.akb {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.akb__row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.akb__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--akb-key-size, 1.9rem);
+  height: var(--akb-key-size, 1.9rem);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition:
+    background-color 90ms ease,
+    border-color 90ms ease,
+    color 90ms ease,
+    transform 90ms ease;
+}
+
+.akb--lg .akb__key {
+  --akb-key-size: 2.5rem;
+  font-size: 0.9375rem;
+}
+
+.akb--idle .akb__key {
+  animation: akb-wave 2.4s ease-in-out var(--akb-delay, 0ms) infinite;
+}
+
+@keyframes akb-wave {
+  0%,
+  76%,
+  100% {
+    border-color: var(--line-strong);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--ink-dim);
+    transform: none;
+  }
+  8% {
+    border-color: var(--red-500);
+    background: var(--red-wash);
+    color: var(--ink-bright);
+    transform: translateY(-2px);
+  }
+}
+
+.akb--live .akb__key--active {
+  border-color: var(--red-500);
+  background: var(--red-500);
+  color: var(--ink-bright);
+  box-shadow: 0 0 10px var(--red-glow);
+  transform: scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .akb--idle .akb__key {
+    animation: none;
+  }
+}

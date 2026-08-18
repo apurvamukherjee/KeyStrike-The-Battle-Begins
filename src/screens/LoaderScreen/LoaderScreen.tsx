@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import './LoaderScreen.css';
 
 const MIN_DISPLAY_MS = 1100;
@@ -47,6 +48,7 @@ export default function LoaderScreen({ onDone }: LoaderScreenProps) {
       <h1 className="wordmark">
         Key<span>Strike</span>
       </h1>
+      <AnimatedKeyboard mode="idle" size="lg" />
       <div className="loader__bar">
         <div className="loader__fill" style={{ width: `${progress * 100}%` }} />
       </div>

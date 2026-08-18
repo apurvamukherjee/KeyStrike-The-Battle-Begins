@@ -68,6 +68,18 @@ a {
   background:
     radial-gradient(ellipse 60% 45% at 50% 0%, var(--red-wash), transparent 70%),
     var(--bg);
+  background-size: 200% 200%, 100% 100%;
+  animation: backdrop-drift 18s ease-in-out infinite;
+}
+
+@keyframes backdrop-drift {
+  0%,
+  100% {
+    background-position: 50% 0%, 0 0;
+  }
+  50% {
+    background-position: 42% 10%, 0 0;
+  }
 }
 
 .backdrop::after {
@@ -79,6 +91,17 @@ a {
     linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 42px 42px;
   mask-image: radial-gradient(ellipse at 50% 30%, black 0%, transparent 75%);
+  animation: backdrop-grid-pulse 9s ease-in-out infinite;
+}
+
+@keyframes backdrop-grid-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* ---------------------------------------------------------------- screen */
@@ -235,7 +258,9 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen {
+  .screen,
+  .backdrop,
+  .backdrop::after {
     animation: none;
   }
 }

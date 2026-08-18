@@ -1,0 +1,117 @@
+.word-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.25rem, 4vh, 2rem);
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding: 1rem;
+}
+
+.word-stage__active {
+  font-size: clamp(2.25rem, 8vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.word-stage__letter {
+  display: inline-block;
+  color: var(--ink-faint);
+  transition: color 80ms ease;
+}
+
+.word-stage__letter--done {
+  color: var(--red-400);
+  text-shadow: 0 0 14px var(--red-glow);
+}
+
+.word-stage__letter--next {
+  color: var(--ink-bright);
+  position: relative;
+}
+
+.word-stage__letter--next::after {
+  content: '';
+  position: absolute;
+  left: 0.05em;
+  right: 0.05em;
+  bottom: -0.14em;
+  height: 3px;
+  background: var(--red-500);
+  animation: cursor-blink 1s steps(1) infinite;
+}
+
+@keyframes cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.word-stage__bar {
+  width: min(22rem, 80vw);
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+
+.word-stage__bar-fill {
+  height: 100%;
+  background: var(--red-500);
+  transition: width 80ms linear;
+}
+
+.word-stage__bar-fill--urgent {
+  background: var(--red-400);
+  animation: bar-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes bar-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.word-stage--overtime .word-stage__bar {
+  animation: overtime-flash 0.4s ease-in-out infinite;
+}
+
+@keyframes overtime-flash {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--red-500);
+  }
+}
+
+.word-stage__queue {
+  display: flex;
+  gap: 1.25rem;
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  min-height: 1.5em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-stage__letter--next::after,
+  .word-stage__bar-fill--urgent,
+  .word-stage--overtime .word-stage__bar {
+    animation: none;
+  }
+}

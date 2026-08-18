@@ -3,9 +3,9 @@
 }
 
 .loader__bar {
-  width: min(20rem, 80vw);
-  height: 6px;
-  border-radius: 3px;
+  width: min(14rem, 60vw);
+  height: 3px;
+  border-radius: 2px;
   background: var(--line-strong);
   overflow: hidden;
 }
