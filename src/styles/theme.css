@@ -1,0 +1,34 @@
+:root {
+  color-scheme: dark;
+
+  /* Ground */
+  --bg: #08080a;
+  --bg-raised: #131316;
+  --bg-inset: #0f0f12;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --ink: #e8e6e9;
+  --ink-bright: #ffffff;
+  --ink-dim: #9a969f;
+  --ink-faint: #615d66;
+
+  /* Red — the one accent in the whole app */
+  --red-500: #e0263f;
+  --red-400: #ff4d63;
+  --red-600: #b3122a;
+  --red-glow: rgba(224, 38, 63, 0.45);
+  --red-wash: rgba(224, 38, 63, 0.12);
+
+  /* Feedback (used sparingly, red stays the star of the show) */
+  --perfect: #ff4d63;
+  --good: #e8e6e9;
+  --miss: #4a464d;
+
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+}

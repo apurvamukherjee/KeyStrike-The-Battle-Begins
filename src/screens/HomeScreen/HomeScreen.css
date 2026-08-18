@@ -1,0 +1,22 @@
+.home__hint {
+  text-align: center;
+}
+
+.home__hint-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--red-400);
+}
+
+.home__hint p {
+  margin: 0 0 0.6rem;
+  color: var(--ink-dim);
+  line-height: 1.9;
+}
+
+.home__hint p:last-child {
+  margin-bottom: 0;
+}

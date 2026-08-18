@@ -1,0 +1,77 @@
+.results__difficulty {
+  margin: -1.25rem 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.results__best {
+  margin: -1rem 0 0;
+  color: var(--red-400);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px var(--red-glow);
+}
+
+.results__panel {
+  width: min(26rem, 100%);
+  text-align: center;
+}
+
+.results__grade {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink-bright);
+  text-shadow: 0 0 24px var(--red-glow);
+  margin-bottom: 1rem;
+}
+
+.results__stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 1.25rem;
+}
+
+.results__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.results__stat-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.results__stat-value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--ink-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.results__counts {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+}
+
+.results__count--perfect {
+  color: var(--red-400);
+}
+
+.results__count--good {
+  color: var(--ink);
+}
+
+.results__count--miss {
+  color: var(--ink-faint);
+}

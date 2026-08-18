@@ -1,0 +1,10 @@
+.settings__panel {
+  width: min(28rem, 100%);
+}
+
+.settings__hint {
+  margin: 1.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--ink-faint);
+}

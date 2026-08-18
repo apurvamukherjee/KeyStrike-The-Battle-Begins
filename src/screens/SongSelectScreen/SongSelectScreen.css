@@ -1,0 +1,112 @@
+.difficulty-picker {
+  display: flex;
+  gap: 0.4rem;
+  margin: -0.5rem 0 0;
+}
+
+.difficulty-picker__option {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.difficulty-picker__option:hover {
+  border-color: var(--line-strong);
+  color: var(--ink-bright);
+}
+
+.difficulty-picker__option--active {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+  color: var(--ink-bright);
+}
+
+.song-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(34rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.song-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.song-list__item:hover {
+  border-color: var(--line-strong);
+}
+
+.song-list__item--selected {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+}
+
+.song-list__marker {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  background: var(--song-accent, var(--red-500));
+  box-shadow: 0 0 8px var(--song-accent, var(--red-500));
+}
+
+.song-list__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.song-list__title {
+  color: var(--ink-bright);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-list__artist {
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+}
+
+.song-list__difficulty {
+  flex: 0 0 auto;
+  color: var(--red-400);
+  letter-spacing: 0.05em;
+}
+
+.song-list__best {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  text-align: right;
+  color: var(--ink-dim);
+  font-size: 0.8125rem;
+}

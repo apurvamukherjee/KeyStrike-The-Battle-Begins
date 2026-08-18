@@ -1,0 +1,31 @@
+.loader {
+  text-align: center;
+}
+
+.loader__bar {
+  width: min(20rem, 80vw);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+
+.loader__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--red-600), var(--red-400));
+  box-shadow: 0 0 12px var(--red-glow);
+  transition: width 120ms ease;
+}
+
+.loader__credit {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.loader__credit strong {
+  color: var(--ink-dim);
+  font-weight: 700;
+}
