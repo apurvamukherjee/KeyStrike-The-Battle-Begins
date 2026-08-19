@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import type { Difficulty } from '../types/song';
-import type { JoinAck, PlayerProgress, PlayerResult, RoomState, Team } from './types';
+import type { JoinAck, PlayerProgress, PlayerResult, RaceMode, RoomState, Team } from './types';
 
 const SERVER_URL = (import.meta.env.VITE_BATTLE_SERVER_URL as string | undefined) || 'http://localhost:8787';
 
@@ -44,6 +44,14 @@ export class RoomClient {
     this.socket.emit('select-song', { songId, difficulty });
   }
 
+  selectMode(mode: RaceMode) {
+    this.socket.emit('select-mode', { mode });
+  }
+
+  selectDifficulty(difficulty: Difficulty) {
+    this.socket.emit('select-difficulty', { difficulty });
+  }
+
   toggleReady() {
     this.socket.emit('toggle-ready');
   }
@@ -60,8 +68,8 @@ export class RoomClient {
     this.socket.emit('select-team', { team });
   }
 
-  startBattle() {
-    this.socket.emit('start-battle');
+  startBattle(sentenceText?: string) {
+    this.socket.emit('start-battle', { sentenceText });
   }
 
   sendProgress(progress: PlayerProgress) {

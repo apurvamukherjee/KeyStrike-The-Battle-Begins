@@ -49,7 +49,9 @@ function publicRoom(room) {
     code: room.code,
     hostId: room.hostId,
     phase: room.phase,
+    mode: room.mode,
     songId: room.songId,
+    sentenceText: room.sentenceText,
     difficulty: room.difficulty,
     startAtMs: room.startAtMs,
     winnerId: room.winnerId,
@@ -110,7 +112,9 @@ io.on('connection', (socket) => {
       code,
       hostId: socket.id,
       phase: 'lobby',
+      mode: 'song',
       songId: null,
+      sentenceText: null,
       difficulty: 'normal',
       startAtMs: null,
       winnerId: null,
@@ -171,6 +175,23 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
+  socket.on('select-mode', ({ mode } = {}) => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    if (mode !== 'song' && mode !== 'sentence') return;
+    room.mode = mode;
+    room.sentenceText = null;
+    if (mode === 'sentence') room.suddenDeath = false;
+    broadcastRoom(io, room);
+  });
+
+  socket.on('select-difficulty', ({ difficulty } = {}) => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    if (difficulty === 'easy' || difficulty === 'normal' || difficulty === 'hard') room.difficulty = difficulty;
+    broadcastRoom(io, room);
+  });
+
   socket.on('toggle-ready', () => {
     const room = rooms.get(currentRoomCode);
     const player = room?.players.get(socket.id);
@@ -206,9 +227,15 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
-  socket.on('start-battle', () => {
+  socket.on('start-battle', ({ sentenceText } = {}) => {
     const room = rooms.get(currentRoomCode);
-    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || !room.songId) return;
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    if (room.mode === 'sentence') {
+      if (typeof sentenceText !== 'string' || sentenceText.length === 0) return;
+      room.sentenceText = sentenceText;
+    } else if (!room.songId) {
+      return;
+    }
     if (room.teamMode) {
       const players = [...room.players.values()];
       const hasA = players.some((p) => p.team === 'A');

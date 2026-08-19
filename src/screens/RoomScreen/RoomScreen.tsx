@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { pickSentences } from '../../data/sentences';
 import { songs } from '../../data/songs';
 import { RoomClient } from '../../multiplayer/RoomClient';
 import { clearPendingSession } from '../../multiplayer/session';
@@ -9,6 +10,7 @@ import { getWinStreak } from '../../utils/winStreak';
 import './RoomScreen.css';
 
 const TEAMS: Team[] = ['A', 'B'];
+const SESSION_SENTENCE_COUNT = 4;
 
 interface RoomScreenProps {
   client: RoomClient;
@@ -86,21 +88,30 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           <div className="room__mode-toggles">
             <button
               type="button"
+              className={`room__team-mode-toggle${room.mode === 'sentence' ? ' room__team-mode-toggle--active' : ''}`}
+              onClick={() => client.selectMode(room.mode === 'sentence' ? 'song' : 'sentence')}
+            >
+              Mode: {room.mode === 'sentence' ? 'Sentence' : 'Song'}
+            </button>
+            <button
+              type="button"
               className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
               onClick={() => client.toggleTeamMode()}
             >
               Team Mode: {room.teamMode ? 'On' : 'Off'}
             </button>
-            <button
-              type="button"
-              className={`room__team-mode-toggle${room.suddenDeath ? ' room__team-mode-toggle--active' : ''}`}
-              onClick={() => client.toggleSuddenDeath()}
-            >
-              Sudden Death: {room.suddenDeath ? 'On' : 'Off'}
-            </button>
+            {room.mode === 'song' && (
+              <button
+                type="button"
+                className={`room__team-mode-toggle${room.suddenDeath ? ' room__team-mode-toggle--active' : ''}`}
+                onClick={() => client.toggleSuddenDeath()}
+              >
+                Sudden Death: {room.suddenDeath ? 'On' : 'Off'}
+              </button>
+            )}
           </div>
         )}
-        {room.suddenDeath && (
+        {room.mode === 'song' && room.suddenDeath && (
           <p className="room__sudden-death-hint">One miss and you&rsquo;re out — spectate the rest of the race.</p>
         )}
 
@@ -123,43 +134,66 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         )}
 
         {isHost ? (
-          <div className="room__song-picker">
-            <label className="room__field">
-              <span className="room__field-label">Song</span>
-              <select
-                className="room__select"
-                value={room.songId ?? ''}
-                onChange={(e) => client.selectSong(e.target.value, room.difficulty)}
-              >
-                <option value="" disabled>
-                  Choose a song…
-                </option>
-                {songs.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title}
-                  </option>
+          room.mode === 'sentence' ? (
+            <div className="room__song-picker">
+              <div className="difficulty-picker" role="radiogroup" aria-label="Difficulty">
+                {DIFFICULTIES.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    role="radio"
+                    aria-checked={room.difficulty === d}
+                    className={`difficulty-picker__option${room.difficulty === d ? ' difficulty-picker__option--active' : ''}`}
+                    onClick={() => client.selectDifficulty(d)}
+                  >
+                    {DIFFICULTY_LABEL[d]}
+                  </button>
                 ))}
-              </select>
-            </label>
-
-            <div className="difficulty-picker" role="radiogroup" aria-label="Difficulty">
-              {DIFFICULTIES.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  role="radio"
-                  aria-checked={room.difficulty === d}
-                  className={`difficulty-picker__option${room.difficulty === d ? ' difficulty-picker__option--active' : ''}`}
-                  onClick={() => client.selectSong(room.songId ?? songs[0].id, d)}
-                >
-                  {DIFFICULTY_LABEL[d]}
-                </button>
-              ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="room__song-picker">
+              <label className="room__field">
+                <span className="room__field-label">Song</span>
+                <select
+                  className="room__select"
+                  value={room.songId ?? ''}
+                  onChange={(e) => client.selectSong(e.target.value, room.difficulty)}
+                >
+                  <option value="" disabled>
+                    Choose a song…
+                  </option>
+                  {songs.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="difficulty-picker" role="radiogroup" aria-label="Difficulty">
+                {DIFFICULTIES.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    role="radio"
+                    aria-checked={room.difficulty === d}
+                    className={`difficulty-picker__option${room.difficulty === d ? ' difficulty-picker__option--active' : ''}`}
+                    onClick={() => client.selectSong(room.songId ?? songs[0].id, d)}
+                  >
+                    {DIFFICULTY_LABEL[d]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
         ) : (
           <p className="room__song-readout">
-            {song ? `${song.title} · ${DIFFICULTY_LABEL[room.difficulty]}` : 'Waiting for the host to pick a song…'}
+            {room.mode === 'sentence'
+              ? `Sentence Mode · ${DIFFICULTY_LABEL[room.difficulty]}`
+              : song
+                ? `${song.title} · ${DIFFICULTY_LABEL[room.difficulty]}`
+                : 'Waiting for the host to pick a song…'}
           </p>
         )}
       </div>
@@ -169,8 +203,12 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           <button
             type="button"
             className="cap cap--primary"
-            disabled={!room.songId || !teamsReady}
-            onClick={() => client.startBattle()}
+            disabled={(room.mode === 'song' && !room.songId) || !teamsReady}
+            onClick={() =>
+              client.startBattle(
+                room.mode === 'sentence' ? pickSentences(room.difficulty, SESSION_SENTENCE_COUNT).join(' ') : undefined
+              )
+            }
           >
             Start Race
           </button>

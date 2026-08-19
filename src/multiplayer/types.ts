@@ -2,6 +2,8 @@ import type { Difficulty } from '../types/song';
 
 export type RoomPhase = 'lobby' | 'countdown' | 'battle' | 'results';
 
+export type RaceMode = 'song' | 'sentence';
+
 export interface PlayerProgress {
   /** 0-1, how far this player's car has traveled toward the finish line */
   carProgress: number;
@@ -39,7 +41,9 @@ export interface RoomState {
   code: string;
   hostId: string;
   phase: RoomPhase;
+  mode: RaceMode;
   songId: string | null;
+  sentenceText: string | null;
   difficulty: Difficulty;
   startAtMs: number | null;
   winnerId: string | null;
