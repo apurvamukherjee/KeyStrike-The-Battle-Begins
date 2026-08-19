@@ -31,6 +31,8 @@ export interface RoomPlayer {
   progress: PlayerProgress | null;
   finished: boolean;
   result: PlayerResult | null;
+  /** Sudden Death: crashed out after a miss — can keep spectating but can't win this race. */
+  eliminated: boolean;
 }
 
 export interface RoomState {
@@ -43,6 +45,7 @@ export interface RoomState {
   winnerId: string | null;
   teamMode: boolean;
   winningTeam: Team | null;
+  suddenDeath: boolean;
   players: RoomPlayer[];
 }
 

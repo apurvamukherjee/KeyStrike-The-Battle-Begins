@@ -1,4 +1,4 @@
-import type { JudgementCounts } from '../types/game';
+import type { JudgementCounts, SentenceRunResult } from '../types/game';
 
 const STATS_KEY = 'keystrike:stats:v1';
 
@@ -11,6 +11,9 @@ export interface LifetimeStats {
   bestComboEver: number;
   totalScoreEver: number;
   longestWordCleared: string;
+  totalSentenceRuns: number;
+  totalCharactersTyped: number;
+  bestWpmEver: number;
 }
 
 const DEFAULT_STATS: LifetimeStats = {
@@ -22,6 +25,9 @@ const DEFAULT_STATS: LifetimeStats = {
   bestComboEver: 0,
   totalScoreEver: 0,
   longestWordCleared: '',
+  totalSentenceRuns: 0,
+  totalCharactersTyped: 0,
+  bestWpmEver: 0,
 };
 
 function readStats(): LifetimeStats {
@@ -64,5 +70,16 @@ export function recordRun(run: RunSummary, longestWordCleared: string) {
   if (longestWordCleared.length > stats.longestWordCleared.length) {
     stats.longestWordCleared = longestWordCleared;
   }
+  writeStats(stats);
+}
+
+/** Call once when a Sentence Mode run finishes. */
+export function recordSentenceRun(run: SentenceRunResult) {
+  const stats = readStats();
+  stats.totalSentenceRuns += 1;
+  stats.totalCharactersTyped += run.charactersTyped;
+  stats.bestComboEver = Math.max(stats.bestComboEver, run.maxCombo);
+  stats.totalScoreEver += run.score;
+  stats.bestWpmEver = Math.max(stats.bestWpmEver, Math.round(run.wpm));
   writeStats(stats);
 }

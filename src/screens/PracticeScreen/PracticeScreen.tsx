@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
+import { beatAnimationDelay } from '../../engine/beatClock';
 import { WordRunner } from '../../engine/chartEngine';
 import { scaleSongTiming, sliceSong } from '../../engine/songBuilder';
 import type { Difficulty } from '../../types/song';
@@ -37,6 +38,7 @@ export default function PracticeScreen({ songId, difficulty, onExit }: PracticeS
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [paused, setPausedState] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [beatPulseStyle, setBeatPulseStyle] = useState<CSSProperties>({});
   const actionsRef = useRef({ togglePause: () => {}, exit: () => {} });
   const playheadRef = useRef(0);
 
@@ -53,6 +55,9 @@ export default function PracticeScreen({ songId, difficulty, onExit }: PracticeS
     const windowEnd = Math.max(windowStart + 1, loopEnd ?? baseSong.durationSec);
     const sliced = sliceSong(baseSong, difficulty, windowStart, windowEnd);
     const song = scaleSongTiming(sliced, speed);
+    // scaleSongTiming divides every timestamp by speed without touching song.bpm,
+    // so the beat grid's *effective* tempo after scaling is the original bpm times speed.
+    const effectiveBpm = baseSong.bpm * speed;
 
     const ctx = getAudioContext();
     ctx.resume().catch(() => {});
@@ -76,6 +81,10 @@ export default function PracticeScreen({ songId, difficulty, onExit }: PracticeS
       runner = new WordRunner(song.charts[difficulty]);
       startAt = ctx.currentTime + 0.3;
       scheduleSong(ctx, song, startAt, masterGain);
+      setBeatPulseStyle({
+        animationDuration: `${60 / effectiveBpm}s`,
+        animationDelay: `${beatAnimationDelay(ctx.currentTime, startAt, effectiveBpm)}s`,
+      });
     }
     scheduleIteration();
 
@@ -211,6 +220,7 @@ export default function PracticeScreen({ songId, difficulty, onExit }: PracticeS
       </div>
 
       <div className="gameplay-body">
+        <div className="beat-pulse" style={beatPulseStyle} aria-hidden="true" />
         <WordStage
           word={stage.word}
           typed={stage.typed}

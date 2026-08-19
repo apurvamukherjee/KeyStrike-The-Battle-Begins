@@ -5,7 +5,7 @@ import { DIFFICULTIES, type Difficulty } from '../../types/song';
 import './SongSelectScreen.css';
 
 interface SongSelectScreenProps {
-  onSelect: (songId: string, difficulty: Difficulty) => void;
+  onSelect: (songId: string, difficulty: Difficulty, beatChallenge: boolean) => void;
   onPractice: (songId: string, difficulty: Difficulty) => void;
   onBack: () => void;
 }
@@ -19,6 +19,7 @@ const DIFFICULTY_LABEL: Record<Difficulty, string> = {
 export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongSelectScreenProps) {
   const [index, setIndex] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [beatChallenge, setBeatChallenge] = useState(false);
   const cycleDifficulty = (dir: 1 | -1) => {
     const i = DIFFICULTIES.indexOf(difficulty);
     setDifficulty(DIFFICULTIES[(i + dir + DIFFICULTIES.length) % DIFFICULTIES.length]);
@@ -30,15 +31,16 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
       else if (e.code === 'ArrowUp') setIndex((i) => Math.max(0, i - 1));
       else if (e.code === 'ArrowRight') cycleDifficulty(1);
       else if (e.code === 'ArrowLeft') cycleDifficulty(-1);
+      else if (e.code === 'KeyB') setBeatChallenge((b) => !b);
       else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         if (e.shiftKey) onPractice(songs[index].id, difficulty);
-        else onSelect(songs[index].id, difficulty);
+        else onSelect(songs[index].id, difficulty, beatChallenge);
       } else if (e.code === 'Escape') onBack();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, difficulty, onSelect, onPractice, onBack]);
+  }, [index, difficulty, beatChallenge, onSelect, onPractice, onBack]);
 
   return (
     <div className="screen">
@@ -59,6 +61,30 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
         ))}
       </div>
 
+      <div className="song-select__beat-toggle settings__toggle-row">
+        <span className="settings__toggle-label">Beat Challenge</span>
+        <div className="settings__toggle" role="radiogroup" aria-label="Beat Challenge">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!beatChallenge}
+            className={`settings__toggle-option${!beatChallenge ? ' settings__toggle-option--active' : ''}`}
+            onClick={() => setBeatChallenge(false)}
+          >
+            Off
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={beatChallenge}
+            className={`settings__toggle-option${beatChallenge ? ' settings__toggle-option--active' : ''}`}
+            onClick={() => setBeatChallenge(true)}
+          >
+            On
+          </button>
+        </div>
+      </div>
+
       <ul className="song-list" role="listbox" aria-activedescendant={songs[index]?.id}>
         {songs.map((song, i) => {
           const best = getBestScore(song.id, difficulty);
@@ -72,7 +98,7 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
               className={`song-list__item${selected ? ' song-list__item--selected' : ''}`}
               style={{ '--song-accent': song.accent } as CSSProperties}
               onClick={() => setIndex(i)}
-              onDoubleClick={() => onSelect(song.id, difficulty)}
+              onDoubleClick={() => onSelect(song.id, difficulty, beatChallenge)}
             >
               <span className="song-list__marker" aria-hidden="true" />
               <span className="song-list__meta">
@@ -90,7 +116,11 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
       </ul>
 
       <div className="cap-row">
-        <button type="button" className="cap cap--primary" onClick={() => onSelect(songs[index].id, difficulty)}>
+        <button
+          type="button"
+          className="cap cap--primary"
+          onClick={() => onSelect(songs[index].id, difficulty, beatChallenge)}
+        >
           Play
         </button>
         <button type="button" className="cap" onClick={() => onPractice(songs[index].id, difficulty)}>

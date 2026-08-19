@@ -2,7 +2,22 @@ import { beatsToSeconds, degreeToFreq, MINOR_PENTATONIC } from './music';
 import type { Difficulty, SongDefinition, SynthNote, SynthTrack, WordNote } from '../types/song';
 
 const EASY_MAX_LEN = 5;
-const HARD_MIN_LEN = 4;
+
+/**
+ * Beats of time budget per character, by difficulty. A word's timing window
+ * scales with its own length, so the typing speed required to make the
+ * deadline stays roughly constant within a tier — a flat per-word window
+ * (the old model) is trivial for short words and impossible for long ones
+ * in the very same tier, which is exactly what made Hard unplayable.
+ */
+const BEATS_PER_CHAR: Record<Difficulty, number> = {
+  easy: 1.1,
+  normal: 0.75,
+  hard: 0.5,
+};
+
+/** Floor so even a short word never flashes by unreadably fast on Hard. */
+const MIN_WORD_BEATS = 1.5;
 
 export interface WordSongSource {
   id: string;
@@ -24,21 +39,13 @@ export interface WordSongSource {
   hats?: boolean;
 }
 
-interface Placement {
-  pool: readonly string[];
-  beatsPerWord: number;
-}
-
-function placementFor(words: readonly string[], difficulty: Difficulty): Placement {
+/** Easy leans on shorter words for readability; Normal/Hard draw from the full bank — the per-word timing below is what actually paces them apart. */
+function poolFor(words: readonly string[], difficulty: Difficulty): readonly string[] {
   if (difficulty === 'easy') {
     const pool = words.filter((w) => w.length <= EASY_MAX_LEN);
-    return { pool: pool.length ? pool : words, beatsPerWord: 6 };
+    return pool.length ? pool : words;
   }
-  if (difficulty === 'hard') {
-    const pool = words.filter((w) => w.length >= HARD_MIN_LEN);
-    return { pool: pool.length ? pool : words, beatsPerWord: 2 };
-  }
-  return { pool: words, beatsPerWord: 4 };
+  return words;
 }
 
 function buildChart(
@@ -48,12 +55,19 @@ function buildChart(
   bars: number,
   beatsPerBar: number
 ): WordNote[] {
-  const { pool, beatsPerWord } = placementFor(words, difficulty);
+  const pool = poolFor(words, difficulty);
+  const beatsPerChar = BEATS_PER_CHAR[difficulty];
   const totalBeats = bars * beatsPerBar;
-  const count = Math.max(1, Math.floor(totalBeats / beatsPerWord));
+
   const notes: WordNote[] = [];
-  for (let i = 0; i < count; i++) {
-    notes.push({ time: toSec((i + 1) * beatsPerWord), word: pool[i % pool.length] });
+  let cumulative = 0;
+  for (let i = 0; ; i++) {
+    const word = pool[i % pool.length];
+    const wordBeats = Math.max(MIN_WORD_BEATS, word.length * beatsPerChar);
+    // Always place at least one word, even in a degenerate too-short chart.
+    if (notes.length > 0 && cumulative + wordBeats > totalBeats) break;
+    cumulative += wordBeats;
+    notes.push({ time: toSec(cumulative), word });
   }
   return notes;
 }

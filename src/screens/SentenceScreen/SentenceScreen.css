@@ -1,0 +1,24 @@
+.sentence-screen__beat-toggle {
+  width: min(22rem, 100%);
+  margin: -0.5rem 0 0;
+}
+
+.sentence-screen__hint {
+  width: min(30rem, 100%);
+  text-align: center;
+  color: var(--ink-dim);
+  line-height: 1.7;
+  font-size: 0.875rem;
+}
+
+.sentence-controls-hint {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+.sentence-controls-hint kbd {
+  margin: 0 0.15em;
+}

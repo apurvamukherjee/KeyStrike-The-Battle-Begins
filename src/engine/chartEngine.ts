@@ -68,6 +68,11 @@ export class WordRunner {
     return Math.min(4, 1 + Math.floor(this.combo / 15) * 0.5);
   }
 
+  /** Adds bonus points outside normal word judging — e.g. a Beat Challenge on-beat bonus. */
+  addBonus(points: number): void {
+    this.score += points;
+  }
+
   /** Call on every single-letter keydown. */
   handleKey(letter: string, songTime: number): KeyResult {
     const state = this.activeWord;

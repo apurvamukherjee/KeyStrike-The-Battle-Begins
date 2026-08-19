@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
+import { beatAnimationDelay, distanceToBeat } from '../../engine/beatClock';
 import { WordRunner, gradeForAccuracy } from '../../engine/chartEngine';
 import { scaleSongTiming } from '../../engine/songBuilder';
 import type { Judgement, RunResult } from '../../types/game';
@@ -18,10 +19,14 @@ const QUEUE_PREVIEW = 3;
 const LETTER_RE = /^[a-zA-Z]$/;
 const COMBO_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500];
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+/** How close (seconds) a keystroke must land to a beat boundary to earn the Beat Challenge bonus. */
+const BEAT_CHALLENGE_WINDOW_SEC = 0.08;
+const BEAT_CHALLENGE_BONUS = 15;
 
 interface GameplayScreenProps {
   songId: string;
   difficulty: Difficulty;
+  beatChallenge: boolean;
   onFinish: (result: RunResult) => void;
   onQuit: () => void;
 }
@@ -35,6 +40,7 @@ interface HudState {
   shakeSeq: number;
   milestone: number | null;
   milestoneSeq: number;
+  onBeatHits: number;
 }
 
 interface StageState {
@@ -54,10 +60,11 @@ const INITIAL_HUD: HudState = {
   shakeSeq: 0,
   milestone: null,
   milestoneSeq: 0,
+  onBeatHits: 0,
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
-export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }: GameplayScreenProps) {
+export default function GameplayScreen({ songId, difficulty, beatChallenge, onFinish, onQuit }: GameplayScreenProps) {
   const actionsRef = useRef({ togglePause: () => {}, quit: () => {} });
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
@@ -66,6 +73,7 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
   const [progress, setProgressState] = useState(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [mobileStarted, setMobileStarted] = useState(!IS_TOUCH);
+  const [beatPulseStyle, setBeatPulseStyle] = useState<CSSProperties>({});
 
   useEffect(() => {
     if (!mobileStarted) return;
@@ -75,7 +83,11 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       onQuit();
       return;
     }
-    const song = scaleSongTiming(baseSong, getGameSpeed());
+    const gameSpeed = getGameSpeed();
+    const song = scaleSongTiming(baseSong, gameSpeed);
+    // scaleSongTiming divides every timestamp by gameSpeed without touching song.bpm,
+    // so the beat grid's *effective* tempo after scaling is the original bpm times speed.
+    const effectiveBpm = baseSong.bpm * gameSpeed;
 
     const ctx = getAudioContext();
     ctx.resume().catch(() => {});
@@ -93,6 +105,11 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
     const startAt = ctx.currentTime + COUNTDOWN_SEC;
     const durationSec = song.durationSec;
     scheduleSong(ctx, song, startAt, masterGain);
+
+    setBeatPulseStyle({
+      animationDuration: `${60 / effectiveBpm}s`,
+      animationDelay: `${beatAnimationDelay(ctx.currentTime, startAt, effectiveBpm)}s`,
+    });
 
     let finished = false;
     let isPaused = false;
@@ -128,6 +145,7 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       onFinish({
         songId,
         difficulty,
+        beatChallenge,
         score: runner.score,
         maxCombo: runner.maxCombo,
         accuracy,
@@ -169,7 +187,12 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
         shakeSeq: judgement === 'miss' ? h.shakeSeq + 1 : h.shakeSeq,
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
+        onBeatHits: h.onBeatHits,
       }));
+    }
+
+    function bumpOnBeat() {
+      setHud((h) => ({ ...h, score: runner.score, onBeatHits: h.onBeatHits + 1 }));
     }
 
     function processLetter(letter: string) {
@@ -179,6 +202,13 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       if (result.type === 'ignored') return;
 
       playChime(ctx, fxGain, 'key');
+
+      if (beatChallenge && distanceToBeat(judgeTime, effectiveBpm) <= BEAT_CHALLENGE_WINDOW_SEC) {
+        runner.addBonus(BEAT_CHALLENGE_BONUS);
+        playChime(ctx, fxGain, 'onbeat');
+        bumpOnBeat();
+      }
+
       if (result.type === 'wordComplete') {
         playChime(ctx, fxGain, result.judgement);
         bumpHud(result.judgement);
@@ -278,7 +308,7 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId, difficulty, mobileStarted]);
+  }, [songId, difficulty, beatChallenge, mobileStarted]);
 
   if (IS_TOUCH && !mobileStarted) {
     return (
@@ -340,6 +370,12 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
           <span className="gameplay-hud__label">Accuracy</span>
           <span className="gameplay-hud__value">{hud.accuracy.toFixed(1)}%</span>
         </div>
+        {beatChallenge && (
+          <div className="gameplay-hud__stat">
+            <span className="gameplay-hud__label">On-Beat</span>
+            <span className="gameplay-hud__value">{hud.onBeatHits}</span>
+          </div>
+        )}
       </div>
 
       <div className="gameplay-progress">
@@ -350,6 +386,7 @@ export default function GameplayScreen({ songId, difficulty, onFinish, onQuit }:
         className={`gameplay-body${hud.shakeSeq > 0 ? ' gameplay-body--shake' : ''}`}
         key={hud.shakeSeq}
       >
+        <div className="beat-pulse" style={beatPulseStyle} aria-hidden="true" />
         <WordStage
           word={stage.word}
           typed={stage.typed}

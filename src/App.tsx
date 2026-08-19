@@ -7,12 +7,14 @@ import GameplayScreen from './screens/GameplayScreen/GameplayScreen';
 import ResultsScreen from './screens/ResultsScreen/ResultsScreen';
 import StatsScreen from './screens/StatsScreen/StatsScreen';
 import PracticeScreen from './screens/PracticeScreen/PracticeScreen';
+import SentenceScreen from './screens/SentenceScreen/SentenceScreen';
+import SentenceResultsScreen from './screens/SentenceScreen/SentenceResultsScreen';
 import LobbyScreen from './screens/LobbyScreen/LobbyScreen';
 import RoomScreen from './screens/RoomScreen/RoomScreen';
 import BattleScreen from './screens/BattleScreen/BattleScreen';
 import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScreen';
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
-import type { RunResult, ScreenState } from './types/game';
+import type { RunResult, ScreenState, SentenceRunResult } from './types/game';
 import type { Difficulty } from './types/song';
 import { RoomClient } from './multiplayer/RoomClient';
 import { clearPendingSession, loadPendingSession } from './multiplayer/session';
@@ -26,9 +28,11 @@ type Action =
   | { type: 'GO_SETTINGS' }
   | { type: 'GO_STATS' }
   | { type: 'GO_LOBBY' }
-  | { type: 'START_SONG'; songId: string; difficulty: Difficulty }
+  | { type: 'START_SONG'; songId: string; difficulty: Difficulty; beatChallenge: boolean }
   | { type: 'START_PRACTICE'; songId: string; difficulty: Difficulty }
   | { type: 'FINISH_SONG'; result: RunResult }
+  | { type: 'GO_SENTENCE'; retry?: { difficulty: Difficulty; beatChallenge: boolean } }
+  | { type: 'FINISH_SENTENCE'; result: SentenceRunResult }
   | { type: 'ENTER_ROOM'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE_RESULTS'; client: RoomClient; room: RoomState };
@@ -47,11 +51,15 @@ function reducer(state: ScreenState, action: Action): ScreenState {
     case 'GO_LOBBY':
       return { name: 'lobby' };
     case 'START_SONG':
-      return { name: 'playing', songId: action.songId, difficulty: action.difficulty };
+      return { name: 'playing', songId: action.songId, difficulty: action.difficulty, beatChallenge: action.beatChallenge };
     case 'START_PRACTICE':
       return { name: 'practice', songId: action.songId, difficulty: action.difficulty };
     case 'FINISH_SONG':
       return { name: 'results', result: action.result };
+    case 'GO_SENTENCE':
+      return { name: 'sentence', retry: action.retry };
+    case 'FINISH_SENTENCE':
+      return { name: 'sentenceResults', result: action.result };
     case 'ENTER_ROOM':
       return { name: 'room', client: action.client, room: action.room };
     case 'ENTER_BATTLE':
@@ -67,6 +75,7 @@ export default function App() {
   const [screen, dispatch] = useReducer(reducer, { name: 'loader' } as ScreenState);
   const goHome = useCallback(() => dispatch({ type: 'GO_HOME' }), []);
   const goSongSelect = useCallback(() => dispatch({ type: 'GO_SONG_SELECT' }), []);
+  const goSentence = useCallback(() => dispatch({ type: 'GO_SENTENCE' }), []);
   const goLobby = useCallback(() => dispatch({ type: 'GO_LOBBY' }), []);
 
   useEffect(() => {
@@ -118,6 +127,10 @@ export default function App() {
       case 'results':
         backHandlerRef.current = goSongSelect;
         break;
+      case 'sentence':
+      case 'sentenceResults':
+        backHandlerRef.current = goHome;
+        break;
       case 'room':
       case 'battle':
       case 'battleResults':
@@ -162,6 +175,7 @@ export default function App() {
       {screen.name === 'home' && (
         <HomeScreen
           onPlay={goSongSelect}
+          onSentences={goSentence}
           onSettings={() => dispatch({ type: 'GO_SETTINGS' })}
           onStats={() => dispatch({ type: 'GO_STATS' })}
           onBattle={goLobby}
@@ -170,7 +184,9 @@ export default function App() {
 
       {screen.name === 'songSelect' && (
         <SongSelectScreen
-          onSelect={(songId, difficulty) => dispatch({ type: 'START_SONG', songId, difficulty })}
+          onSelect={(songId, difficulty, beatChallenge) =>
+            dispatch({ type: 'START_SONG', songId, difficulty, beatChallenge })
+          }
           onPractice={(songId, difficulty) => dispatch({ type: 'START_PRACTICE', songId, difficulty })}
           onBack={goHome}
         />
@@ -215,6 +231,7 @@ export default function App() {
         <GameplayScreen
           songId={screen.songId}
           difficulty={screen.difficulty}
+          beatChallenge={screen.beatChallenge}
           onFinish={(result) => dispatch({ type: 'FINISH_SONG', result })}
           onQuit={goSongSelect}
         />
@@ -224,11 +241,39 @@ export default function App() {
         <PracticeScreen songId={screen.songId} difficulty={screen.difficulty} onExit={goSongSelect} />
       )}
 
+      {screen.name === 'sentence' && (
+        <SentenceScreen
+          initialDifficulty={screen.retry?.difficulty}
+          initialBeatChallenge={screen.retry?.beatChallenge}
+          autoStart={!!screen.retry}
+          onFinish={(result) => dispatch({ type: 'FINISH_SENTENCE', result })}
+          onExit={goHome}
+        />
+      )}
+
+      {screen.name === 'sentenceResults' && (
+        <SentenceResultsScreen
+          result={screen.result}
+          onRetry={() =>
+            dispatch({
+              type: 'GO_SENTENCE',
+              retry: { difficulty: screen.result.difficulty, beatChallenge: screen.result.beatChallenge },
+            })
+          }
+          onHome={goHome}
+        />
+      )}
+
       {screen.name === 'results' && (
         <ResultsScreen
           result={screen.result}
           onRetry={() =>
-            dispatch({ type: 'START_SONG', songId: screen.result.songId, difficulty: screen.result.difficulty })
+            dispatch({
+              type: 'START_SONG',
+              songId: screen.result.songId,
+              difficulty: screen.result.difficulty,
+              beatChallenge: screen.result.beatChallenge,
+            })
           }
           onSongSelect={goSongSelect}
           onHome={goHome}

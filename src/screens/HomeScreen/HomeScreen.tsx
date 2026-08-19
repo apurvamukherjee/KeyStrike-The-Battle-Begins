@@ -3,12 +3,13 @@ import './HomeScreen.css';
 
 interface HomeScreenProps {
   onPlay: () => void;
+  onSentences: () => void;
   onSettings: () => void;
   onStats: () => void;
   onBattle: () => void;
 }
 
-export default function HomeScreen({ onPlay, onSettings, onStats, onBattle }: HomeScreenProps) {
+export default function HomeScreen({ onPlay, onSentences, onSettings, onStats, onBattle }: HomeScreenProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === 'Enter' || e.code === 'NumpadEnter') onPlay();
@@ -27,6 +28,9 @@ export default function HomeScreen({ onPlay, onSettings, onStats, onBattle }: Ho
       <div className="cap-row">
         <button type="button" className="cap cap--primary" onClick={onPlay} autoFocus>
           Play
+        </button>
+        <button type="button" className="cap" onClick={onSentences}>
+          Sentences
         </button>
         <button type="button" className="cap" onClick={onBattle}>
           Battle

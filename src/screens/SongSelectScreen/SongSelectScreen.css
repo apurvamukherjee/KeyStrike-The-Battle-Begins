@@ -1,3 +1,8 @@
+.song-select__beat-toggle {
+  width: min(22rem, 100%);
+  margin: -0.5rem 0 0;
+}
+
 .song-list {
   list-style: none;
   margin: 0;

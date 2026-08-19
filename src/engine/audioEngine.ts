@@ -77,13 +77,14 @@ function isNoise(wave: Waveform): wave is 'noise' {
   return wave === 'noise';
 }
 
-export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss';
+export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss' | 'onbeat';
 
 const CHIME_FREQ: Record<ChimeKind, number> = {
   key: 1200,
   perfect: 880,
   good: 660,
   miss: 220,
+  onbeat: 1600,
 };
 
 /**

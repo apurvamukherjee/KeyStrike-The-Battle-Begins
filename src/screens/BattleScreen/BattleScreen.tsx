@@ -17,6 +17,7 @@ const LETTER_RE = /^[a-zA-Z]$/;
 const QUEUE_PREVIEW = 3;
 const PROGRESS_SEND_INTERVAL = 0.25;
 const MISS_ADVANCE_FRACTION = 0.15;
+const COMBO_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500];
 
 interface BattleScreenProps {
   client: RoomClient;
@@ -31,6 +32,8 @@ interface HudState {
   accuracy: number;
   lastJudgement: Judgement | null;
   judgementSeq: number;
+  milestone: number | null;
+  milestoneSeq: number;
 }
 
 interface StageState {
@@ -41,7 +44,15 @@ interface StageState {
   upcoming: string[];
 }
 
-const INITIAL_HUD: HudState = { score: 0, combo: 0, accuracy: 100, lastJudgement: null, judgementSeq: 0 };
+const INITIAL_HUD: HudState = {
+  score: 0,
+  combo: 0,
+  accuracy: 100,
+  lastJudgement: null,
+  judgementSeq: 0,
+  milestone: null,
+  milestoneSeq: 0,
+};
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
 export default function BattleScreen({ client, initialRoom, onResults, onLeave }: BattleScreenProps) {
@@ -51,6 +62,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [carProgress, setCarProgress] = useState(0);
   const [countdown, setCountdown] = useState<number | 'go' | null>(null);
+  const [eliminated, setEliminated] = useState(false);
 
   useEffect(() => {
     client.setOnRoomUpdate((next) => {
@@ -111,9 +123,11 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
     scheduleSong(ctx, song, startAt, masterGain);
 
     let finished = false;
+    let crashedOut = false;
     let raf = 0;
     let progress = 0;
     let lastSent = -Infinity;
+    let comboMilestonesHit = 0;
 
     function teardown() {
       cancelAnimationFrame(raf);
@@ -134,13 +148,26 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
     }
 
     function bumpHud(judgement: Judgement) {
+      const milestoneIndex = COMBO_MILESTONES.indexOf(runner.combo);
+      const hitNewMilestone = judgement !== 'miss' && milestoneIndex !== -1 && milestoneIndex >= comboMilestonesHit;
+      if (hitNewMilestone) comboMilestonesHit = milestoneIndex + 1;
+
       setHud((h) => ({
         score: runner.score,
         combo: runner.combo,
         accuracy: runner.accuracy,
         lastJudgement: judgement,
         judgementSeq: h.judgementSeq + 1,
+        milestone: hitNewMilestone ? runner.combo : h.milestone,
+        milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
       }));
+    }
+
+    function crashOut() {
+      if (crashedOut) return;
+      crashedOut = true;
+      setEliminated(true);
+      client.sendEliminated();
     }
 
     function advanceCar(judgement: Judgement) {
@@ -171,7 +198,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
         onLeave();
         return;
       }
-      if (finished || e.repeat || !LETTER_RE.test(e.key)) return;
+      if (finished || crashedOut || e.repeat || !LETTER_RE.test(e.key)) return;
       const letter = e.key.toUpperCase();
       setActiveKey(letter);
       processLetter(letter);
@@ -191,10 +218,16 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
         const rawSongTime = ctx.currentTime - startAt;
         const judgeTime = rawSongTime - offsetSec;
 
-        if (runner.sweepMisses(judgeTime)) {
+        // sweepMisses keeps running even after a crash-out (so the runner's
+        // internal index still advances toward isComplete), but the visible/
+        // audible miss feedback and the crash/advance decision only fire
+        // once, on the miss that actually happens — not on every subsequent
+        // frame for the rest of the song.
+        if (runner.sweepMisses(judgeTime) && !crashedOut) {
           playChime(ctx, fxGain, 'miss');
           bumpHud('miss');
-          advanceCar('miss');
+          if (room.suddenDeath) crashOut();
+          else advanceCar('miss');
         }
 
         const active = runner.activeWord;
@@ -242,6 +275,10 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
     return p.id === client.id ? carProgress : (p.progress?.carProgress ?? 0);
   }
 
+  function playerEliminated(p: RoomPlayer) {
+    return p.id === client.id ? eliminated : p.eliminated;
+  }
+
   const racers: Racer[] = room.teamMode
     ? (['A', 'B'] as const).map((team) => {
         const members = room.players.filter((p) => p.team === team);
@@ -253,6 +290,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
           isYou: members.some((p) => p.id === client.id),
           finished: room.winningTeam === team,
           connected: members.some((p) => p.connected),
+          eliminated: members.length > 0 && members.every((p) => playerEliminated(p)),
           members: members.map((p) => ({ nickname: p.nickname, avatarIndex: p.avatarIndex, isYou: p.id === client.id })),
         };
       })
@@ -264,6 +302,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
         isYou: p.id === client.id,
         finished: p.finished,
         connected: p.connected,
+        eliminated: playerEliminated(p),
       }));
 
   return (
@@ -300,6 +339,14 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
             {hud.lastJudgement.toUpperCase()}
           </div>
         )}
+
+        {hud.milestone && (
+          <div key={hud.milestoneSeq} className="gameplay-milestone">
+            {hud.milestone}x COMBO
+          </div>
+        )}
+
+        {eliminated && <div className="battle-eliminated-banner">Eliminated — spectating</div>}
       </div>
 
       {countdown !== null && (

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { RoomClient } from '../../multiplayer/RoomClient';
 import { clearPendingSession } from '../../multiplayer/session';
 import type { RoomPlayer, RoomState, Team } from '../../multiplayer/types';
 import Avatar from '../../components/Avatar/Avatar';
 import { formatScore } from '../../utils/format';
+import { recordBattleOutcome, type StreakRecord } from '../../utils/winStreak';
 import './BattleResultsScreen.css';
 
 interface BattleResultsScreenProps {
@@ -28,6 +30,7 @@ function PlayerRow({ p, isYou }: { p: RoomPlayer; isYou: boolean }) {
         {p.nickname}
         {isYou ? ' (you)' : ''}
       </span>
+      {p.eliminated && <span className="battle-results__eliminated-tag">Eliminated</span>}
       <span className="battle-results__score">{formatScore(scoreOf(p))}</span>
       <span className="battle-results__accuracy">{accuracy.toFixed(1)}%</span>
     </div>
@@ -36,6 +39,17 @@ function PlayerRow({ p, isYou }: { p: RoomPlayer; isYou: boolean }) {
 
 export default function BattleResultsScreen({ client, room, onRematch, onLeave }: BattleResultsScreenProps) {
   const isHost = client.id === room.hostId;
+  const [streak, setStreak] = useState<StreakRecord | null>(null);
+
+  // Recorded once per race conclusion — this screen is freshly mounted each
+  // time a race ends, so an empty dep array is exactly "once per result."
+  useEffect(() => {
+    const me = room.players.find((p) => p.id === client.id);
+    if (!me) return;
+    const won = room.teamMode ? room.winningTeam !== null && me.team === room.winningTeam : me.id === room.winnerId;
+    setStreak(recordBattleOutcome(me.nickname, won));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="screen">
@@ -48,6 +62,10 @@ export default function BattleResultsScreen({ client, room, onRematch, onLeave }
           const winner = room.players.find((p) => p.id === room.winnerId);
           return winner && <p className="battle-results__winner">{winner.nickname} wins the race!</p>;
         })()
+      )}
+
+      {streak && streak.current >= 2 && (
+        <p className="battle-results__streak">{streak.current}-win streak</p>
       )}
 
       <div className="panel battle-results__panel">
@@ -86,6 +104,7 @@ export default function BattleResultsScreen({ client, room, onRematch, onLeave }
                     {p.nickname}
                     {p.id === client.id ? ' (you)' : ''}
                   </span>
+                  {p.eliminated && <span className="battle-results__eliminated-tag">Eliminated</span>}
                   <span className="battle-results__score">{formatScore(scoreOf(p))}</span>
                   <span className="battle-results__accuracy">
                     {(p.result?.accuracy ?? p.progress?.accuracy ?? 0).toFixed(1)}%

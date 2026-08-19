@@ -30,6 +30,22 @@
   opacity: 0.4;
 }
 
+.race-track__out-tag {
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.race-track__lane--eliminated .race-track__road {
+  opacity: 0.55;
+}
+
+.race-track__lane--eliminated .race-track__car-icon {
+  filter: grayscale(1);
+}
+
 .race-track__road {
   position: relative;
   height: 2.25rem;

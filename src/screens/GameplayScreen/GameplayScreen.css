@@ -57,6 +57,9 @@
 
 .gameplay-body {
   position: relative;
+  /* Contains .beat-pulse's negative z-index to this box, rather than letting
+     it escape and paint behind sibling elements outside .gameplay-body. */
+  isolation: isolate;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -64,6 +67,32 @@
   align-items: center;
   justify-content: center;
   gap: clamp(1rem, 4vh, 2rem);
+}
+
+/* A tempo-synced ambient pulse — "music sync" made visible. Timed entirely
+   by CSS (animation-duration/-delay computed once from the song's beat grid)
+   rather than driven per-frame from JS, consistent with every other
+   animation in this codebase and free of any rAF/compositor cost. */
+.beat-pulse {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, var(--red-wash), transparent 70%);
+  animation-name: beat-pulse-tick;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes beat-pulse-tick {
+  0% {
+    opacity: 0.75;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0.25;
+    transform: scale(0.98);
+  }
 }
 
 .gameplay-body--shake {
@@ -194,13 +223,15 @@
 @media (prefers-reduced-motion: reduce) {
   .gameplay-judgement,
   .gameplay-body--shake,
-  .gameplay-milestone {
+  .gameplay-milestone,
+  .beat-pulse {
     animation: none;
   }
 }
 
 :root[data-reduce-motion='true'] .gameplay-judgement,
 :root[data-reduce-motion='true'] .gameplay-body--shake,
-:root[data-reduce-motion='true'] .gameplay-milestone {
+:root[data-reduce-motion='true'] .gameplay-milestone,
+:root[data-reduce-motion='true'] .beat-pulse {
   animation: none;
 }

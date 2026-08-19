@@ -36,6 +36,7 @@ function newPlayer(id, nickname, avatarIndex, clientId) {
     progress: null, // { carProgress, score, combo, accuracy }
     finished: false,
     result: null, // { score, maxCombo, accuracy, grade, wonByFinish }
+    eliminated: false, // Sudden Death: crashed out after a miss, can't win this race
   };
 }
 
@@ -54,6 +55,7 @@ function publicRoom(room) {
     winnerId: room.winnerId,
     teamMode: room.teamMode,
     winningTeam: room.winningTeam,
+    suddenDeath: room.suddenDeath,
     players: [...room.players.values()].map((p) => ({
       id: p.id,
       nickname: p.nickname,
@@ -64,6 +66,7 @@ function publicRoom(room) {
       progress: p.progress,
       finished: p.finished,
       result: p.result,
+      eliminated: p.eliminated,
     })),
   };
 }
@@ -113,6 +116,7 @@ io.on('connection', (socket) => {
       winnerId: null,
       teamMode: false,
       winningTeam: null,
+      suddenDeath: false,
       players: new Map(),
       finishTimeout: null,
       touchedAt: Date.now(),
@@ -182,6 +186,13 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
+  socket.on('toggle-sudden-death', () => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    room.suddenDeath = !room.suddenDeath;
+    broadcastRoom(io, room);
+  });
+
   socket.on('select-team', ({ team } = {}) => {
     const room = rooms.get(currentRoomCode);
     const player = room?.players.get(socket.id);
@@ -212,6 +223,7 @@ io.on('connection', (socket) => {
       p.finished = false;
       p.result = null;
       p.progress = null;
+      p.eliminated = false;
     }
     broadcastRoom(io, room);
     setTimeout(() => {
@@ -248,9 +260,24 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
+  // Sudden Death: one miss crashes a racer out for the round. They keep
+  // playing locally (spectating, no more scoring) but can't win — the server
+  // is the one place that needs to know this, so a crashed racer's own
+  // song-end 'finished' event below (see) doesn't accidentally crown them.
+  socket.on('eliminated', () => {
+    const room = rooms.get(currentRoomCode);
+    const player = room?.players.get(socket.id);
+    if (!room || room.phase !== 'battle' || !player || !room.suddenDeath) return;
+    player.eliminated = true;
+    broadcastRoom(io, room);
+  });
+
   // A player reaching the finish line (carProgress >= 1) OR their song ending
-  // sends this. The FIRST one in wins the race outright for the whole room —
-  // "first past the post," not "wait for everyone."
+  // sends this. The FIRST non-eliminated one in wins the race outright for
+  // the whole room — "first past the post," not "wait for everyone." An
+  // eliminated player's song still ends and sends this (so the race doesn't
+  // wait on them), but it only ends the room once every remaining player has
+  // also been accounted for, and never crowns an eliminated player the winner.
   socket.on('finished', (result) => {
     const room = rooms.get(currentRoomCode);
     const player = room?.players.get(socket.id);
@@ -258,8 +285,13 @@ io.on('connection', (socket) => {
 
     player.finished = true;
     player.result = result;
-    room.phase = 'results';
-    room.winnerId = socket.id;
+
+    if (!player.eliminated) {
+      room.phase = 'results';
+      room.winnerId = socket.id;
+    } else if ([...room.players.values()].every((p) => p.finished || !p.connected)) {
+      room.phase = 'results';
+    }
     broadcastRoom(io, room);
   });
 

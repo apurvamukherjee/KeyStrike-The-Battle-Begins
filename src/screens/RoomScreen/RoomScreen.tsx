@@ -5,6 +5,7 @@ import { clearPendingSession } from '../../multiplayer/session';
 import type { RoomState, Team } from '../../multiplayer/types';
 import { DIFFICULTIES, type Difficulty } from '../../types/song';
 import Avatar from '../../components/Avatar/Avatar';
+import { getWinStreak } from '../../utils/winStreak';
 import './RoomScreen.css';
 
 const TEAMS: Team[] = ['A', 'B'];
@@ -43,6 +44,7 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
 
   const isHost = client.id === room.hostId;
   const me = room.players.find((p) => p.id === client.id);
+  const myStreak = me ? getWinStreak(me.nickname) : null;
   const song = songs.find((s) => s.id === room.songId);
   const teamCounts: Record<Team, number> = {
     A: room.players.filter((p) => p.team === 'A').length,
@@ -69,6 +71,9 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
                 {p.nickname}
                 {p.id === room.hostId ? ' (host)' : ''}
               </span>
+              {p.id === client.id && myStreak && myStreak.current >= 2 && (
+                <span className="room__player-streak">{myStreak.current}-win streak</span>
+              )}
               {room.teamMode && p.team && <span className="room__player-team">Team {p.team}</span>}
               <span className={`room__player-ready${p.ready ? ' room__player-ready--yes' : ''}`}>
                 {p.id === room.hostId ? '' : p.ready ? 'Ready' : 'Not ready'}
@@ -78,13 +83,25 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         </ul>
 
         {isHost && (
-          <button
-            type="button"
-            className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
-            onClick={() => client.toggleTeamMode()}
-          >
-            Team Mode: {room.teamMode ? 'On' : 'Off'}
-          </button>
+          <div className="room__mode-toggles">
+            <button
+              type="button"
+              className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
+              onClick={() => client.toggleTeamMode()}
+            >
+              Team Mode: {room.teamMode ? 'On' : 'Off'}
+            </button>
+            <button
+              type="button"
+              className={`room__team-mode-toggle${room.suddenDeath ? ' room__team-mode-toggle--active' : ''}`}
+              onClick={() => client.toggleSuddenDeath()}
+            >
+              Sudden Death: {room.suddenDeath ? 'On' : 'Off'}
+            </button>
+          </div>
+        )}
+        {room.suddenDeath && (
+          <p className="room__sudden-death-hint">One miss and you&rsquo;re out — spectate the rest of the race.</p>
         )}
 
         {room.teamMode && (

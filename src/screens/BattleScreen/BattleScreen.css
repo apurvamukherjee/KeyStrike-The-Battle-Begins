@@ -23,6 +23,23 @@
   color: var(--red-400);
 }
 
+.battle-eliminated-banner {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.9rem;
+  background: var(--bg-inset);
+  pointer-events: none;
+}
+
 @keyframes countdown-pop {
   from {
     opacity: 1;

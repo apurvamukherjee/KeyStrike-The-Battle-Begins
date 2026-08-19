@@ -15,6 +15,8 @@ export interface Racer {
   isYou: boolean;
   finished: boolean;
   connected: boolean;
+  /** Sudden Death: crashed out after a miss — car stays put for the rest of the race. */
+  eliminated?: boolean;
   /** Present for a team-mode lane: renders stacked avatars for both teammates instead of one. */
   members?: RacerMember[];
 }
@@ -42,7 +44,7 @@ export default function RaceTrack({ racers }: RaceTrackProps) {
       {racers.map((r, i) => (
         <div
           key={r.id}
-          className={`race-track__lane${r.isYou ? ' race-track__lane--you' : ''}${!r.connected ? ' race-track__lane--disconnected' : ''}`}
+          className={`race-track__lane${r.isYou ? ' race-track__lane--you' : ''}${!r.connected ? ' race-track__lane--disconnected' : ''}${r.eliminated ? ' race-track__lane--eliminated' : ''}`}
         >
           <span className="race-track__label">
             {r.members ? (
@@ -60,6 +62,7 @@ export default function RaceTrack({ racers }: RaceTrackProps) {
                 {r.isYou ? ' (you)' : ''}
               </>
             )}
+            {r.eliminated && <span className="race-track__out-tag">OUT</span>}
           </span>
           <div className="race-track__road">
             <div className="race-track__finish" aria-hidden="true" />

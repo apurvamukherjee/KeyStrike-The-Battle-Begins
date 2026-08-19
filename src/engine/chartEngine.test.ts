@@ -82,6 +82,17 @@ describe('WordRunner', () => {
     expect(long.score).toBeGreaterThan(short.score);
   });
 
+  it('adds bonus points to score without affecting combo or judgement counts', () => {
+    const runner = new WordRunner(chart);
+    typeWord(runner, 'CAT', 1);
+    const scoreBefore = runner.score;
+    const comboBefore = runner.combo;
+    runner.addBonus(15);
+    expect(runner.score).toBe(scoreBefore + 15);
+    expect(runner.combo).toBe(comboBefore);
+    expect(runner.judgedCount).toBe(1);
+  });
+
   it('reports 100% accuracy and isComplete for an empty chart', () => {
     const runner = new WordRunner([]);
     expect(runner.accuracy).toBe(100);

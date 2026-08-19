@@ -21,7 +21,9 @@ One word at a time, centered on screen, with a shrinking timer underneath —
 type it before the clock runs out. Finish before the deadline for a
 **Perfect**, just after for a **Good**; run out the clock and it's a **Miss**.
 Every song is synthesized live in the browser via the Web Audio API — no
-external audio files, nothing to license.
+external audio files, nothing to license. The same engine also powers
+[Sentence Mode](#sentence-mode) (fog-of-war paragraph typing) and 4-player
+[Battle races](#battle-mode-4-players-no-login).
 
 **Play it:** not deployed yet — clone and run it locally for now (see
 [Development](#development) below).
@@ -35,7 +37,7 @@ external audio files, nothing to license.
   <p align="center"><sub><b>Loader</b> — animated keyboard, By Apurva</sub></p>
 </td>
 <td width="50%">
-  <img src="screenshots/02-home.png" alt="Home screen with Play, Battle, Stats, and Settings" />
+  <img src="screenshots/02-home.png" alt="Home screen with Play, Sentences, Battle, Stats, and Settings" />
   <p align="center"><sub><b>Home</b></sub></p>
 </td>
 </tr>
@@ -100,9 +102,43 @@ external audio files, nothing to license.
 </td>
 </tr>
 <tr>
-<td colspan="2" align="center">
-  <img src="screenshots/17-team-results.png" alt="Battle results screen in team mode, grouped by team, with Team A marked as the winner" width="410" />
+<td width="50%">
+  <img src="screenshots/17-team-results.png" alt="Battle results screen in team mode, grouped by team, with Team A marked as the winner" />
   <p align="center"><sub><b>Team Results</b> — grouped by team, not just by player</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/18-beat-challenge-toggle.png" alt="Song Select screen with a Beat Challenge Off/On toggle below the difficulty picker" />
+  <p align="center"><sub><b>Beat Challenge</b> — an optional on-beat scoring bonus</sub></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <img src="screenshots/19-beat-sync-gameplay.png" alt="Gameplay screen showing a soft tempo-synced pulse behind the word stage and an On-Beat HUD stat" />
+  <p align="center"><sub><b>Beat Sync</b> — a tempo-synced pulse behind the word stage</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/20-sentence-setup.png" alt="Sentence Mode setup screen with a difficulty picker, Beat Challenge toggle, and an explanation of the fog reveal" />
+  <p align="center"><sub><b>Sentence Mode</b> — pick a difficulty tier and fog width</sub></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <img src="screenshots/21-sentence-fog-reveal.png" alt="Sentence Mode gameplay — already-typed text lit up, the current letter bright with a caret, and the rest of the paragraph fading into fog" />
+  <p align="center"><sub><b>Fog Reveal</b> — type to light up the sentence ahead of you</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/22-sentence-results.png" alt="Sentence Mode results screen with an S grade, WPM, accuracy, max combo, and score" />
+  <p align="center"><sub><b>Sentence Results</b> — WPM, accuracy, combo, grade</sub></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <img src="screenshots/23-sudden-death-room.png" alt="Battle room screen with Sudden Death toggled on next to Team Mode, and a hint that one miss eliminates you" />
+  <p align="center"><sub><b>Sudden Death</b> — host toggle, one miss and you're out</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/24-sudden-death-eliminated.png" alt="Battle screen showing an Eliminated — spectating banner and a greyed-out crashed car in the race track" />
+  <p align="center"><sub><b>Crashed Out</b> — spectate the rest of the race live</sub></p>
 </td>
 </tr>
 </table>
@@ -120,10 +156,18 @@ ordinary typing test.
 
 Combo builds a score multiplier as you chain hits, and longer words are
 worth more. Five original songs are included (each with its own hand-curated
-word bank), every one playable at **Easy**, **Normal**, or **Hard** — Easy
-uses shorter words with more time between them, Hard is the opposite. Best
-score per song+difficulty and lifetime stats (words typed, best combo,
-longest word ever cleared) are saved locally in your browser.
+word bank), every one playable at **Easy**, **Normal**, or **Hard** — each
+word's time budget scales with its own length, so the pace you need stays
+consistent within a tier instead of being generous for short words and
+brutal for long ones. Best score per song+difficulty and lifetime stats
+(words typed, best combo, longest word ever cleared) are saved locally in
+your browser.
+
+Flip on **Beat Challenge** in Song Select and a keystroke landing right on
+the beat earns a bonus on top of normal scoring — never a penalty, just
+extra score for playing in the pocket. A soft pulse behind the word stage,
+timed to the song's own tempo, makes the beat visible whether or not the
+challenge is on.
 
 ## Battle mode (4 players, no login)
 
@@ -165,6 +209,33 @@ running or deploying it.
 - **Nickname sanitization** — nicknames are trimmed, collapsed, and
   filtered to a safe character set, live as you type and authoritatively on
   the server (which broadcasts them to everyone else in the room).
+- **Sudden Death** — a host-toggleable room setting where one miss crashes
+  your car out of the race for good. You keep spectating (your song keeps
+  playing so the race doesn't wait on you), but only a racer still in it can
+  win. Composes with Team Mode too — an eliminated player's team just has to
+  lean harder on their surviving teammate.
+- **Combo milestones in Battle** — the same combo-milestone pop-up solo play
+  already had now shows up mid-race too.
+- **Win streaks** — a local, per-nickname streak badge (this device only, no
+  accounts) tracks consecutive race wins and shows up in the room and on the
+  results screen.
+
+## Sentence Mode
+
+A full sentence, not a single word — but you can't read ahead. Already-typed
+text stays lit, the letter under the caret is bright, and everything past it
+fades into fog within a difficulty-tuned window: a wide, forgiving reveal on
+Easy, barely more than the next word on Hard. The caret glides smoothly
+between letters instead of snapping, and an ambient backing track — with the
+same tempo-synced pulse as Beat Challenge — plays underneath. There's no
+per-word deadline; the fog itself is the challenge, which also makes this
+the mode to reach for when you just want to practice without being graded
+on the clock.
+
+Each run strings four sentences from the chosen tier together and tracks
+live WPM, accuracy, and combo, ending on a results screen with a letter
+grade. Beat Challenge works here too, for the same on-beat scoring bonus as
+word mode.
 
 ## Everything else
 
@@ -216,11 +287,11 @@ sounds into ahead of time.
 ```
 src/
 ├── components/     shared UI (AnimatedKeyboard, Avatar, RaceTrack, Slider, FullscreenButton)
-├── screens/        one folder per screen — solo, practice, and battle all live here
-├── engine/         word-judging logic, audio synthesis, song building/scaling
+├── screens/        one folder per screen — solo, practice, sentence, and battle all live here
+├── engine/         word/sentence judging, beat-grid helpers, audio synthesis, song building/scaling
 ├── multiplayer/    RoomClient (socket.io-client wrapper) and shared room types
-├── data/songs/     the five song definitions (word banks + chord progressions)
-├── utils/          localStorage-backed settings, high scores, and lifetime stats
+├── data/           the five song definitions and the Sentence Mode sentence bank
+├── utils/          localStorage-backed settings, high scores, lifetime stats, win streaks
 ├── types/          shared TypeScript types
 └── styles/         theme tokens and global styles
 

@@ -52,6 +52,10 @@ export class RoomClient {
     this.socket.emit('toggle-team-mode');
   }
 
+  toggleSuddenDeath() {
+    this.socket.emit('toggle-sudden-death');
+  }
+
   selectTeam(team: Team | null) {
     this.socket.emit('select-team', { team });
   }
@@ -66,6 +70,10 @@ export class RoomClient {
 
   sendFinished(result: PlayerResult) {
     this.socket.emit('finished', result);
+  }
+
+  sendEliminated() {
+    this.socket.emit('eliminated');
   }
 
   leaveRoom() {
