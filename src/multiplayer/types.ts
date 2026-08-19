@@ -19,12 +19,15 @@ export interface PlayerResult {
   wonByFinish: boolean;
 }
 
+export type Team = 'A' | 'B';
+
 export interface RoomPlayer {
   id: string;
   nickname: string;
   avatarIndex: number;
   ready: boolean;
   connected: boolean;
+  team: Team | null;
   progress: PlayerProgress | null;
   finished: boolean;
   result: PlayerResult | null;
@@ -38,6 +41,8 @@ export interface RoomState {
   difficulty: Difficulty;
   startAtMs: number | null;
   winnerId: string | null;
+  teamMode: boolean;
+  winningTeam: Team | null;
   players: RoomPlayer[];
 }
 

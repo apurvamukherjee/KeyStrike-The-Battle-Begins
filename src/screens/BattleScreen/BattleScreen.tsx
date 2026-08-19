@@ -3,7 +3,8 @@ import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
 import { WordRunner, gradeForAccuracy } from '../../engine/chartEngine';
 import { RoomClient } from '../../multiplayer/RoomClient';
-import type { PlayerResult, RoomState } from '../../multiplayer/types';
+import { clearPendingSession } from '../../multiplayer/session';
+import type { PlayerResult, RoomPlayer, RoomState } from '../../multiplayer/types';
 import type { Judgement } from '../../types/game';
 import { formatScore } from '../../utils/format';
 import { getInputOffsetMs, getVolume } from '../../utils/settings';
@@ -49,6 +50,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [carProgress, setCarProgress] = useState(0);
+  const [countdown, setCountdown] = useState<number | 'go' | null>(null);
 
   useEffect(() => {
     client.setOnRoomUpdate((next) => {
@@ -57,6 +59,31 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
+
+  useEffect(() => {
+    const startAtMs = room.startAtMs;
+    if (!startAtMs) {
+      setCountdown(null);
+      return;
+    }
+    let raf = 0;
+    let goTimeout: number;
+    function tick() {
+      const secLeft = Math.ceil((startAtMs! - Date.now()) / 1000);
+      if (secLeft > 0) {
+        setCountdown(secLeft);
+        raf = requestAnimationFrame(tick);
+      } else {
+        setCountdown('go');
+        goTimeout = window.setTimeout(() => setCountdown(null), 700);
+      }
+    }
+    tick();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(goTimeout);
+    };
+  }, [room.startAtMs]);
 
   useEffect(() => {
     const song = getSongById(room.songId ?? '');
@@ -140,6 +167,7 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
       if (e.code === 'Escape') {
         client.leaveRoom();
         client.destroy();
+        clearPendingSession();
         onLeave();
         return;
       }
@@ -210,15 +238,33 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.songId, room.difficulty]);
 
-  const racers: Racer[] = room.players.map((p) => ({
-    id: p.id,
-    nickname: p.nickname,
-    avatarIndex: p.avatarIndex,
-    carProgress: p.id === client.id ? carProgress : (p.progress?.carProgress ?? 0),
-    isYou: p.id === client.id,
-    finished: p.finished,
-    connected: p.connected,
-  }));
+  function playerProgress(p: RoomPlayer) {
+    return p.id === client.id ? carProgress : (p.progress?.carProgress ?? 0);
+  }
+
+  const racers: Racer[] = room.teamMode
+    ? (['A', 'B'] as const).map((team) => {
+        const members = room.players.filter((p) => p.team === team);
+        return {
+          id: `team-${team}`,
+          nickname: `Team ${team}`,
+          avatarIndex: members[0]?.avatarIndex ?? 0,
+          carProgress: Math.min(1, members.reduce((sum, p) => sum + playerProgress(p), 0)),
+          isYou: members.some((p) => p.id === client.id),
+          finished: room.winningTeam === team,
+          connected: members.some((p) => p.connected),
+          members: members.map((p) => ({ nickname: p.nickname, avatarIndex: p.avatarIndex, isYou: p.id === client.id })),
+        };
+      })
+    : room.players.map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        avatarIndex: p.avatarIndex,
+        carProgress: playerProgress(p),
+        isYou: p.id === client.id,
+        finished: p.finished,
+        connected: p.connected,
+      }));
 
   return (
     <div className="screen gameplay-screen battle-screen">
@@ -255,6 +301,12 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
           </div>
         )}
       </div>
+
+      {countdown !== null && (
+        <div key={countdown} className={`battle-countdown${countdown === 'go' ? ' battle-countdown--go' : ''}`}>
+          {countdown === 'go' ? 'GO' : countdown}
+        </div>
+      )}
     </div>
   );
 }

@@ -20,6 +20,12 @@
   font-weight: 700;
 }
 
+.race-track__member {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .race-track__lane--disconnected {
   opacity: 0.4;
 }

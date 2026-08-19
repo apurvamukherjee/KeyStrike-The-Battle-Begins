@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { RoomClient } from '../../multiplayer/RoomClient';
+import { getOrCreateClientId, savePendingSession } from '../../multiplayer/session';
 import type { RoomState } from '../../multiplayer/types';
+import { sanitizeNickname } from '../../utils/nickname';
 import './LobbyScreen.css';
 
 interface LobbyScreenProps {
@@ -18,13 +20,16 @@ export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
     setError(null);
     setBusy('create');
     const client = new RoomClient(() => {});
-    const ack = await client.createRoom(nickname.trim() || 'Player');
+    const finalNickname = nickname.trim() || 'Player';
+    const clientId = getOrCreateClientId();
+    const ack = await client.createRoom(finalNickname, clientId);
     setBusy(null);
     if (!ack.ok || !ack.room) {
       setError(ack.error ?? 'Could not create room — is the battle server running?');
       client.destroy();
       return;
     }
+    savePendingSession({ clientId, code: ack.room.code, nickname: finalNickname });
     onEnterRoom(client, ack.room);
   }
 
@@ -37,13 +42,16 @@ export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
     setError(null);
     setBusy('join');
     const client = new RoomClient(() => {});
-    const ack = await client.joinRoom(trimmed, nickname.trim() || 'Player');
+    const finalNickname = nickname.trim() || 'Player';
+    const clientId = getOrCreateClientId();
+    const ack = await client.joinRoom(trimmed, finalNickname, clientId);
     setBusy(null);
     if (!ack.ok || !ack.room) {
       setError(ack.error ?? 'Could not join room');
       client.destroy();
       return;
     }
+    savePendingSession({ clientId, code: ack.room.code, nickname: finalNickname });
     onEnterRoom(client, ack.room);
   }
 
@@ -60,7 +68,7 @@ export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
             type="text"
             maxLength={16}
             value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
+            onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
             placeholder="Racer"
           />
         </label>

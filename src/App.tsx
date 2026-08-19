@@ -14,7 +14,8 @@ import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScre
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
 import type { RunResult, ScreenState } from './types/game';
 import type { Difficulty } from './types/song';
-import type { RoomClient } from './multiplayer/RoomClient';
+import { RoomClient } from './multiplayer/RoomClient';
+import { clearPendingSession, loadPendingSession } from './multiplayer/session';
 import type { RoomState } from './multiplayer/types';
 import { applyAppearanceSettings } from './utils/settings';
 
@@ -72,6 +73,25 @@ export default function App() {
     applyAppearanceSettings();
   }, []);
 
+  // A refresh or accidental close mid-room/mid-battle leaves a pending session
+  // in sessionStorage; try to reclaim that seat once before showing any UI,
+  // landing back on whichever phase the room is actually in (not just the lobby).
+  useEffect(() => {
+    const pending = loadPendingSession();
+    if (!pending) return;
+    const client = new RoomClient(() => {});
+    client.rejoinRoom(pending.code, pending.clientId).then((ack) => {
+      if (!ack.ok || !ack.room) {
+        clearPendingSession();
+        client.destroy();
+        return;
+      }
+      if (ack.room.phase === 'lobby') dispatch({ type: 'ENTER_ROOM', client, room: ack.room });
+      else if (ack.room.phase === 'results') dispatch({ type: 'ENTER_BATTLE_RESULTS', client, room: ack.room });
+      else dispatch({ type: 'ENTER_BATTLE', client, room: ack.room });
+    });
+  }, []);
+
   // ---- Browser back/forward sync -----------------------------------------
   // Every screen change pushes a history entry; popstate (the browser's own
   // back/forward buttons) replays whatever "back" already means for the
@@ -104,6 +124,7 @@ export default function App() {
         backHandlerRef.current = () => {
           screen.client.leaveRoom();
           screen.client.destroy();
+          clearPendingSession();
           goHome();
         };
         break;

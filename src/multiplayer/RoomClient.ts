@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import type { Difficulty } from '../types/song';
-import type { JoinAck, PlayerProgress, PlayerResult, RoomState } from './types';
+import type { JoinAck, PlayerProgress, PlayerResult, RoomState, Team } from './types';
 
 const SERVER_URL = (import.meta.env.VITE_BATTLE_SERVER_URL as string | undefined) || 'http://localhost:8787';
 
@@ -28,12 +28,16 @@ export class RoomClient {
     this.socket.on('connect_error', handler);
   }
 
-  createRoom(nickname: string): Promise<JoinAck> {
-    return new Promise((resolve) => this.socket.emit('create-room', { nickname }, resolve));
+  createRoom(nickname: string, clientId: string): Promise<JoinAck> {
+    return new Promise((resolve) => this.socket.emit('create-room', { nickname, clientId }, resolve));
   }
 
-  joinRoom(code: string, nickname: string): Promise<JoinAck> {
-    return new Promise((resolve) => this.socket.emit('join-room', { code, nickname }, resolve));
+  joinRoom(code: string, nickname: string, clientId: string): Promise<JoinAck> {
+    return new Promise((resolve) => this.socket.emit('join-room', { code, nickname, clientId }, resolve));
+  }
+
+  rejoinRoom(code: string, clientId: string): Promise<JoinAck> {
+    return new Promise((resolve) => this.socket.emit('rejoin-room', { code, clientId }, resolve));
   }
 
   selectSong(songId: string, difficulty: Difficulty) {
@@ -42,6 +46,14 @@ export class RoomClient {
 
   toggleReady() {
     this.socket.emit('toggle-ready');
+  }
+
+  toggleTeamMode() {
+    this.socket.emit('toggle-team-mode');
+  }
+
+  selectTeam(team: Team | null) {
+    this.socket.emit('select-team', { team });
   }
 
   startBattle() {

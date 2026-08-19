@@ -57,3 +57,34 @@
   color: var(--ink-dim);
   font-size: 0.875rem;
 }
+
+.battle-results__team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.battle-results__team--winner {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+}
+
+.battle-results__team-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.battle-results__team--winner .battle-results__team-heading {
+  color: var(--red-400);
+}
+
+.battle-results__team .battle-results__row {
+  border: none;
+  padding: 0.25rem 0;
+}

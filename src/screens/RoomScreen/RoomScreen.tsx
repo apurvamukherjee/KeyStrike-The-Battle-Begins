@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { songs } from '../../data/songs';
 import { RoomClient } from '../../multiplayer/RoomClient';
-import type { RoomState } from '../../multiplayer/types';
+import { clearPendingSession } from '../../multiplayer/session';
+import type { RoomState, Team } from '../../multiplayer/types';
 import { DIFFICULTIES, type Difficulty } from '../../types/song';
 import Avatar from '../../components/Avatar/Avatar';
 import './RoomScreen.css';
+
+const TEAMS: Team[] = ['A', 'B'];
 
 interface RoomScreenProps {
   client: RoomClient;
@@ -17,6 +20,18 @@ const DIFFICULTY_LABEL: Record<Difficulty, string> = { easy: 'Easy', normal: 'No
 
 export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave }: RoomScreenProps) {
   const [room, setRoom] = useState(initialRoom);
+  const [copied, setCopied] = useState(false);
+
+  function handleCopyCode() {
+    if (!navigator.clipboard) return;
+    navigator.clipboard
+      .writeText(room.code)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {});
+  }
 
   useEffect(() => {
     client.setOnRoomUpdate((next) => {
@@ -29,10 +44,20 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
   const isHost = client.id === room.hostId;
   const me = room.players.find((p) => p.id === client.id);
   const song = songs.find((s) => s.id === room.songId);
+  const teamCounts: Record<Team, number> = {
+    A: room.players.filter((p) => p.team === 'A').length,
+    B: room.players.filter((p) => p.team === 'B').length,
+  };
+  const teamsReady = !room.teamMode || (teamCounts.A > 0 && teamCounts.B > 0);
 
   return (
     <div className="screen">
-      <h1 className="wordmark wordmark--small">Room {room.code}</h1>
+      <h1 className="wordmark wordmark--small room__heading">
+        Room {room.code}
+        <button type="button" className="room__copy-code" onClick={handleCopyCode}>
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </h1>
       <p className="tagline">Share this code — up to 4 players.</p>
 
       <div className="panel room__panel">
@@ -44,12 +69,41 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
                 {p.nickname}
                 {p.id === room.hostId ? ' (host)' : ''}
               </span>
+              {room.teamMode && p.team && <span className="room__player-team">Team {p.team}</span>}
               <span className={`room__player-ready${p.ready ? ' room__player-ready--yes' : ''}`}>
                 {p.id === room.hostId ? '' : p.ready ? 'Ready' : 'Not ready'}
               </span>
             </li>
           ))}
         </ul>
+
+        {isHost && (
+          <button
+            type="button"
+            className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
+            onClick={() => client.toggleTeamMode()}
+          >
+            Team Mode: {room.teamMode ? 'On' : 'Off'}
+          </button>
+        )}
+
+        {room.teamMode && (
+          <div className="room__team-picker" role="radiogroup" aria-label="Your team">
+            {TEAMS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={me?.team === t}
+                className={`difficulty-picker__option${me?.team === t ? ' difficulty-picker__option--active' : ''}`}
+                disabled={me?.team !== t && teamCounts[t] >= 2}
+                onClick={() => client.selectTeam(me?.team === t ? null : t)}
+              >
+                Team {t} ({teamCounts[t]}/2)
+              </button>
+            ))}
+          </div>
+        )}
 
         {isHost ? (
           <div className="room__song-picker">
@@ -95,7 +149,12 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
 
       <div className="cap-row">
         {isHost ? (
-          <button type="button" className="cap cap--primary" disabled={!room.songId} onClick={() => client.startBattle()}>
+          <button
+            type="button"
+            className="cap cap--primary"
+            disabled={!room.songId || !teamsReady}
+            onClick={() => client.startBattle()}
+          >
             Start Race
           </button>
         ) : (
@@ -109,6 +168,7 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           onClick={() => {
             client.leaveRoom();
             client.destroy();
+            clearPendingSession();
             onLeave();
           }}
         >
