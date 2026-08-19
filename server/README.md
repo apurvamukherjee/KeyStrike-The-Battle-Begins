@@ -4,7 +4,12 @@ A tiny Socket.IO relay for the 4-player Battle mode: room codes, a
 synchronized start signal, and live race-progress broadcast. No database, no
 accounts — rooms live in memory and expire after 30 minutes of inactivity.
 Each client stays authoritative for its own gameplay timing and scoring; the
-server only relays state between players in the same room.
+server mostly relays state between players in the same room, with two
+exceptions where it has to act on its own: in 2v2 team mode it sums both
+teammates' progress and declares the win itself once their combined total
+crosses the finish line (no single client can see the pair's total), and it
+matches a reconnecting client back to its existing seat by a client-generated
+id so a refresh mid-lobby or mid-battle doesn't lose the player's spot.
 
 ## Run locally
 

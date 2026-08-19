@@ -79,6 +79,32 @@ external audio files, nothing to license.
   <p align="center"><sub><b>Battle Results</b> — first past the post wins</sub></p>
 </td>
 </tr>
+<tr>
+<td width="50%">
+  <img src="screenshots/13-copy-code.png" alt="Battle room heading with a one-click Copy button next to the room code, showing the Copied confirmation state" />
+  <p align="center"><sub><b>Copy Room Code</b> — one click, "Copied" confirmation</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/14-team-mode-room.png" alt="Battle room with Team Mode on, four players split into Team A and Team B" />
+  <p align="center"><sub><b>Team Mode</b> — pick a side, 2 players per team</sub></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <img src="screenshots/15-countdown.png" alt="Battle screen showing a large 3-2-1-GO countdown overlay before the race starts" />
+  <p align="center"><sub><b>3…2…1…GO</b> — an on-screen countdown before the race</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/16-team-battle.png" alt="Battle screen in team mode showing two lanes, each with two stacked teammate avatars sharing one car" />
+  <p align="center"><sub><b>Team Race</b> — two lanes, one shared car per team</sub></p>
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+  <img src="screenshots/17-team-results.png" alt="Battle results screen in team mode, grouped by team, with Team A marked as the winner" width="410" />
+  <p align="center"><sub><b>Team Results</b> — grouped by team, not just by player</sub></p>
+</td>
+</tr>
 </table>
 
 ## How to play
@@ -118,6 +144,27 @@ server ([`server/`](server/)) only relays room membership, a synchronized
 start signal, and a periodic progress snapshot from each player so everyone
 sees everyone else live. See [`server/README.md`](server/README.md) for
 running or deploying it.
+
+### What's new
+
+- **2v2 team mode** — toggle Team Mode in the room and pick a side (2
+  players per team). Each teammate keeps typing their own words with the
+  same local scoring as always, but their progress bars now share one car —
+  the server sums both members' progress and calls the win itself once a
+  team's combined total crosses the finish line, since no single client can
+  see the pair's combined total. Results are grouped by team instead of one
+  flat leaderboard.
+- **3…2…1…GO countdown** — the gap between the room and the first word used
+  to be a silent pause; it now counts down on screen before the race starts.
+- **Copy room code** — a one-click copy button next to the room heading,
+  with a "Copied" confirmation, for sharing the code without a screenshot.
+- **Rejoin after refresh** — a refresh or accidental tab close mid-lobby or
+  mid-battle used to lose your seat for good. Each tab now keeps a small
+  session token and reclaims its spot on reconnect — including picking a
+  race back up mid-battle — instead of starting over.
+- **Nickname sanitization** — nicknames are trimmed, collapsed, and
+  filtered to a safe character set, live as you type and authoritatively on
+  the server (which broadcasts them to everyone else in the room).
 
 ## Everything else
 
