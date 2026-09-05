@@ -2,9 +2,18 @@
 
 ### The Battle Begins
 
-<p align="center">
-  <img src="screenshots/11-battle.png" width="820" alt="Four racers neck-and-neck in a KeyStrike Battle, each car pulling ahead on the strength of a clean combo" />
-</p>
+<table>
+<tr>
+<td width="50%">
+  <img src="screenshots/11-battle.png" width="100%" alt="Four racers neck-and-neck in a KeyStrike Battle, each car pulling ahead on the strength of a clean combo" />
+  <p align="center"><sub><b>Battle</b> — four racers, first car to the line wins</sub></p>
+</td>
+<td width="50%">
+  <img src="screenshots/25-duel-mode.png" width="100%" alt="A KeyStrike sword duel mid-fight — a landed strike flashing red on the rival's swordsman under a torii gate and rising moon" />
+  <p align="center"><sub><b>Duel Mode</b> — a sword strike for every clean word</sub></p>
+</td>
+</tr>
+</table>
 
 <p align="center"><em>Your keyboard, turned into the fastest weapon in the room.</em></p>
 
@@ -95,6 +104,21 @@ KeyStrike runs entirely in the browser, on desktop or mobile.
   and your score are all still there waiting.
 - **Fullscreen everywhere.** A single toggle, present on every screen, for
   sessions with nothing else on the display.
+
+## Tech stack
+
+| Layer | Technology | What it's for |
+|---|---|---|
+| UI | React 18 + TypeScript | Every screen — menus, gameplay, results — as typed, composable components; one reducer in `App.tsx` drives all navigation |
+| Build tooling | Vite | Dev server with instant reload, and the production bundle |
+| Audio | Web Audio API | Every song and sound effect is synthesized live with oscillators and noise bursts — no audio files shipped or licensed, and the backing track can react to your combo in real time |
+| Duel animation | GSAP (`gsap` + `@gsap/react`) | The sword-swing, lunge, hit-recoil, and victory/defeat choreography in Duel Mode |
+| Multiplayer relay | Socket.IO (server + `socket.io-client`) | Room creation/joining, a synchronized start signal, live progress and power-up events — over a small Node.js server, in-memory only, no database |
+| Offline support | vite-plugin-pwa | Installable, offline-capable Progressive Web App packaging |
+| Persistence | Browser `localStorage` | Best scores, lifetime stats, ghost replays, and duel ladder progress — entirely client-side, no accounts |
+| Testing | Vitest | Unit tests for the gameplay engine — scoring, timing, chart generation, and the CPU opponent simulation |
+| Linting | ESLint + typescript-eslint | Keeps the codebase's style and type usage consistent |
+| Deployment target | Render (server) + any static host (frontend) | `server/render.yaml` is a ready-to-go Blueprint for the relay; the frontend build is a plain static site deployable anywhere |
 
 ---
 
