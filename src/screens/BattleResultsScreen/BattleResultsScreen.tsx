@@ -3,6 +3,7 @@ import { RoomClient } from '../../multiplayer/RoomClient';
 import { clearPendingSession } from '../../multiplayer/session';
 import type { RoomPlayer, RoomState, Team } from '../../multiplayer/types';
 import Avatar from '../../components/Avatar/Avatar';
+import DuelResultsScreen from '../DuelResultsScreen/DuelResultsScreen';
 import { formatScore } from '../../utils/format';
 import { recordBattleOutcome, type StreakRecord } from '../../utils/winStreak';
 import './BattleResultsScreen.css';
@@ -50,6 +51,32 @@ export default function BattleResultsScreen({ client, room, onRematch, onLeave }
     setStreak(recordBattleOutcome(me.nickname, won));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (room.mode === 'duel') {
+    const me = room.players.find((p) => p.id === client.id);
+    const opponent = room.players.find((p) => p.id !== client.id);
+    if (!me || !opponent) return null;
+    const won = me.id === room.winnerId;
+    const zeroStats = { score: 0, accuracy: 0, maxCombo: 0 };
+    return (
+      <DuelResultsScreen
+        won={won}
+        youNickname={me.nickname}
+        youAvatarIndex={me.avatarIndex}
+        opponentNickname={opponent.nickname}
+        opponentAvatarIndex={opponent.avatarIndex}
+        youStats={me.result ?? zeroStats}
+        opponentStats={opponent.result ?? zeroStats}
+        onRematch={isHost ? onRematch : undefined}
+        onLeave={() => {
+          client.leaveRoom();
+          client.destroy();
+          clearPendingSession();
+          onLeave();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="screen">

@@ -1,0 +1,83 @@
+.duel-results__stage {
+  position: relative;
+  width: min(28rem, 90vw);
+  height: 9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duel-results__stamp {
+  position: absolute;
+  font-size: 6rem;
+  font-weight: 800;
+  line-height: 1;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.duel-results__stamp--victor {
+  color: var(--red-400);
+  text-shadow: 0 0 30px var(--red-glow);
+}
+
+.duel-results__stamp--defeat {
+  color: var(--ink-faint);
+  text-shadow: none;
+}
+
+.duel-results__portraits {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.duel-results__portrait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 110px;
+}
+
+.duel-results__portrait .swordsman {
+  width: 96px;
+  height: 136px;
+}
+
+.duel-results__portrait-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.duel-results__banner {
+  margin-top: 0.5rem;
+  color: var(--ink-faint);
+}
+
+.duel-results__banner--victor {
+  color: var(--ink-bright);
+  text-shadow: 0 0 20px var(--red-glow);
+}
+
+.duel-results__opponent-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
+.duel-results__opponent-label {
+  font-weight: 700;
+  color: var(--ink-dim);
+}

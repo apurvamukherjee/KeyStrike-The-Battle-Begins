@@ -23,6 +23,7 @@ import { clearPendingSession, loadPendingSession } from './multiplayer/session';
 import type { RoomState } from './multiplayer/types';
 import { applyAppearanceSettings } from './utils/settings';
 import { getGhostReplay } from './utils/ghostReplays';
+import { songs } from './data/songs';
 
 type Action =
   | { type: 'LOADED' }
@@ -58,7 +59,17 @@ function reducer(state: ScreenState, action: Action): ScreenState {
     case 'GO_DUEL_SELECT':
       return { name: 'duelSelect' };
     case 'START_DUEL':
-      return { name: 'duel', songId: action.songId, difficulty: action.difficulty, enemyId: action.enemyId };
+      // A fresh attempt id (not just songId/difficulty/enemyId) so DuelScreen
+      // fully remounts on every fight — including a Rematch that happens to
+      // pick the same random song again, which wouldn't otherwise change any
+      // of its props and so wouldn't reset its internal outcome/result state.
+      return {
+        name: 'duel',
+        songId: action.songId,
+        difficulty: action.difficulty,
+        enemyId: action.enemyId,
+        attempt: Date.now(),
+      };
     case 'START_SONG':
       return { name: 'playing', songId: action.songId, difficulty: action.difficulty, beatChallenge: action.beatChallenge };
     case 'START_PRACTICE':
@@ -206,10 +217,20 @@ export default function App() {
 
       {screen.name === 'duel' && (
         <DuelScreen
+          key={screen.attempt}
           songId={screen.songId}
           difficulty={screen.difficulty}
           enemyId={screen.enemyId}
           onExit={goDuelSelect}
+          onRematch={() =>
+            dispatch({
+              type: 'START_DUEL',
+              // A fresh random song each rematch, same as picking "Fight" again from the ladder.
+              songId: songs[Math.floor(Math.random() * songs.length)].id,
+              difficulty: screen.difficulty,
+              enemyId: screen.enemyId,
+            })
+          }
         />
       )}
 

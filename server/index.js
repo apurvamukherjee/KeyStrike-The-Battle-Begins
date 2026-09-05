@@ -346,6 +346,26 @@ io.on('connection', (socket) => {
     player.finished = true;
     player.result = result;
 
+    // Duel Mode: "first past the post" only applies to a genuine finishing
+    // blow (wonByFinish — carProgress actually reached 1). If a fighter's
+    // song simply ran out first without landing the kill, that alone doesn't
+    // decide anything — whichever client's network packet happens to arrive
+    // at the server first isn't a meaningful tiebreak. Wait for the other
+    // fighter too, then whoever dealt more damage (higher carProgress from
+    // the regular progress broadcast) wins.
+    if (room.mode === 'duel') {
+      if (result.wonByFinish) {
+        room.phase = 'results';
+        room.winnerId = socket.id;
+      } else if ([...room.players.values()].every((p) => p.finished)) {
+        const [a, b] = [...room.players.values()];
+        room.winnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.id : b.id;
+        room.phase = 'results';
+      }
+      broadcastRoom(io, room);
+      return;
+    }
+
     if (!player.eliminated) {
       room.phase = 'results';
       room.winnerId = socket.id;

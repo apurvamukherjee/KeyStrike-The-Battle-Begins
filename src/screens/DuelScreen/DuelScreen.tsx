@@ -15,6 +15,7 @@ import { getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import DuelArena, { type DuelStrike } from '../../components/DuelArena/DuelArena';
 import type { Racer } from '../../components/RaceTrack/RaceTrack';
+import DuelResultsScreen from '../DuelResultsScreen/DuelResultsScreen';
 import WordStage from '../GameplayScreen/WordStage';
 import '../GameplayScreen/GameplayScreen.css';
 
@@ -28,6 +29,13 @@ interface DuelScreenProps {
   difficulty: Difficulty;
   enemyId: string;
   onExit: () => void;
+  onRematch: () => void;
+}
+
+interface ResultStats {
+  score: number;
+  accuracy: number;
+  maxCombo: number;
 }
 
 interface HudState {
@@ -61,7 +69,7 @@ const INITIAL_HUD: HudState = {
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
-export default function DuelScreen({ songId, difficulty, enemyId, onExit }: DuelScreenProps) {
+export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRematch }: DuelScreenProps) {
   const enemy = getEnemyById(enemyId);
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
@@ -69,9 +77,17 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [racers, setRacers] = useState<[Racer, Racer] | null>(null);
   const [outcome, setOutcome] = useState<'won' | 'lost' | null>(null);
+  const [resultStats, setResultStats] = useState<ResultStats | null>(null);
   const actionsRef = useRef({ togglePause: () => {}, quit: () => {} });
 
   useEffect(() => {
+    // Clears any previous duel's result screen — this effect re-runs on every
+    // Rematch (a fresh songId/enemyId/difficulty), and since DuelScreen itself
+    // never unmounts between rounds, stale outcome/resultStats would otherwise
+    // keep DuelResultsScreen showing right through a freshly-started fight.
+    setOutcome(null);
+    setResultStats(null);
+
     if (!enemy) {
       onExit();
       return;
@@ -129,6 +145,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
       recordRun({ maxCombo: runner.maxCombo, score: runner.score, counts: runner.counts }, longestCleared);
       recordKeyStats(keyStats);
 
+      setResultStats({ score: runner.score, accuracy: runner.accuracy, maxCombo: runner.maxCombo });
       setOutcome(won ? 'won' : 'lost');
     }
 
@@ -312,6 +329,22 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
 
   if (!enemy) return null;
 
+  if (outcome && resultStats) {
+    return (
+      <DuelResultsScreen
+        won={outcome === 'won'}
+        youNickname="You"
+        youAvatarIndex={0}
+        opponentNickname={enemy.name}
+        opponentAvatarIndex={enemy.swordsmanIndex}
+        youStats={resultStats}
+        onRematch={onRematch}
+        onLeave={onExit}
+        leaveLabel="Back to the Ladder"
+      />
+    );
+  }
+
   return (
     <div className="screen gameplay-screen">
       <div className="gameplay-hud">
@@ -354,7 +387,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
         )}
       </div>
 
-      {paused && !outcome && (
+      {paused && (
         <div className="gameplay-pause">
           <div className="panel gameplay-pause__panel">
             <h2 className="wordmark wordmark--small">Paused</h2>
@@ -364,24 +397,6 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
               </button>
               <button type="button" className="cap" onClick={() => actionsRef.current.quit()}>
                 Quit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {outcome && (
-        <div className="gameplay-pause">
-          <div className="panel gameplay-pause__panel">
-            <h2 className="wordmark wordmark--small">{outcome === 'won' ? `${enemy.name} Defeated` : 'You Were Struck Down'}</h2>
-            <p className="gameplay-no-keyboard__copy">
-              {outcome === 'won'
-                ? `You landed the finishing blow on ${enemy.name}.`
-                : `${enemy.name} proved too fast this time.`}
-            </p>
-            <div className="cap-row">
-              <button type="button" className="cap cap--primary" onClick={onExit}>
-                Back to the Ladder
               </button>
             </div>
           </div>

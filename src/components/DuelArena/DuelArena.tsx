@@ -3,6 +3,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Swordsman from '../Swordsman/Swordsman';
 import type { Racer } from '../RaceTrack/RaceTrack';
+import { prefersReducedMotion } from '../../utils/motion';
 import './DuelArena.css';
 
 /** A one-shot strike to replay — bump `seq` (matching HudState's judgementSeq/milestoneSeq pattern elsewhere) to trigger it again for the same striker. */
@@ -24,18 +25,6 @@ const REST_ANGLE = -34;
 const DIR: Record<Side, number> = { left: 1, right: -1 };
 const PETAL_COUNT = 14;
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false;
-  // Respects both the OS-level setting and the app's own in-Settings toggle
-  // (utils/settings.ts sets this dataset attribute on the root) — every other
-  // animated component in the app checks both, via a CSS media query plus a
-  // `:root[data-reduce-motion='true']` selector; this is the JS-side (GSAP)
-  // equivalent of that same pair.
-  return (
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-    document.documentElement.dataset.reduceMotion === 'true'
-  );
-}
 
 export default function DuelArena({ racers, strike }: DuelArenaProps) {
   const [left, right] = racers;
