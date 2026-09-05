@@ -84,6 +84,11 @@ export class RoomClient {
     this.socket.emit('toggle-team-mode');
   }
 
+  /** Duel Mode only: 3-4 player free-for-all, mutually exclusive with Team Duel. */
+  toggleDuelFFA() {
+    this.socket.emit('toggle-duel-ffa');
+  }
+
   toggleSuddenDeath() {
     this.socket.emit('toggle-sudden-death');
   }
@@ -118,9 +123,14 @@ export class RoomClient {
     this.socket.emit('use-power-up', { type, targetId });
   }
 
-  /** Duel Mode: fire-and-forget notice that a clean word just landed, purely so the opponent's screen can animate the strike. */
-  sendWordStruck() {
-    this.socket.emit('word-struck');
+  /** Duel Mode: fire-and-forget notice that a clean word just landed, purely so the opponent's screen can animate the strike. `targetId` is FFA-only, identifying who got hit. */
+  sendWordStruck(targetId?: string) {
+    this.socket.emit('word-struck', { targetId });
+  }
+
+  /** FFA Duel only: server-authoritative damage — deducts `amount` from `targetId`'s hp (see autoTarget in DuelBattleStage.tsx). */
+  sendDuelStrike(targetId: string, amount: number) {
+    this.socket.emit('duel-strike', { targetId, amount });
   }
 
   leaveRoom() {

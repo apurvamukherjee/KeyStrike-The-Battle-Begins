@@ -33,9 +33,11 @@ export interface PowerUpUsedEvent {
   targetId: string | null;
 }
 
-/** Duel Mode: relayed each time a player lands a clean word, purely to trigger the opponent's sword-swing animation on everyone's screen — the actual HP/damage numbers still come from the regular progress broadcast. */
+/** Duel Mode: relayed each time a player lands a clean word, purely to trigger the swing animation on everyone's screen — the actual HP/damage numbers come from the regular progress broadcast (1v1/2v2) or the duel-strike event (FFA). */
 export interface WordStruckEvent {
   fromId: string;
+  /** FFA Duel only — which fighter was hit, so their screen (and everyone else's) knows who to flash. */
+  targetId?: string | null;
 }
 
 export interface RoomPlayer {
@@ -50,8 +52,10 @@ export interface RoomPlayer {
   progress: PlayerProgress | null;
   finished: boolean;
   result: PlayerResult | null;
-  /** Sudden Death: crashed out after a miss — can keep spectating but can't win this race. */
+  /** Sudden Death: crashed out after a miss. FFA Duel: hp hit 0. Either way, keeps spectating but can't win. */
   eliminated: boolean;
+  /** FFA Duel only: 0-1, damaged by other fighters' clean words (see DuelBattleStage's autoTarget/duel-strike). Meaningless outside FFA. */
+  hp: number;
 }
 
 export interface RoomState {
@@ -66,6 +70,8 @@ export interface RoomState {
   /** Racing: the winning player's socket id. Duel Mode: the winning player's clientId (survives a rejoin) — see RoomPlayer.clientId. */
   winnerId: string | null;
   teamMode: boolean;
+  /** Duel Mode only: 3-4 player free-for-all, mutually exclusive with teamMode. */
+  duelFFA: boolean;
   winningTeam: Team | null;
   suddenDeath: boolean;
   /** Duel Mode only: rounds needed to decide a match (first to `ceil(duelBestOf/2)` round wins). */

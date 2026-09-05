@@ -36,7 +36,8 @@ function newPlayer(id, nickname, avatarIndex, clientId) {
     progress: null, // { carProgress, score, combo, accuracy }
     finished: false,
     result: null, // { score, maxCombo, accuracy, grade, wonByFinish }
-    eliminated: false, // Sudden Death: crashed out after a miss, can't win this race
+    eliminated: false, // Sudden Death: crashed out after a miss, can't win this race; FFA Duel: HP hit 0
+    hp: 1, // FFA Duel only: 0-1, damaged by other fighters' 'duel-strike' events
   };
 }
 
@@ -56,6 +57,7 @@ function publicRoom(room) {
     startAtMs: room.startAtMs,
     winnerId: room.winnerId,
     teamMode: room.teamMode,
+    duelFFA: room.duelFFA,
     winningTeam: room.winningTeam,
     suddenDeath: room.suddenDeath,
     duelBestOf: room.duelBestOf,
@@ -73,6 +75,7 @@ function publicRoom(room) {
       finished: p.finished,
       result: p.result,
       eliminated: p.eliminated,
+      hp: p.hp,
     })),
   };
 }
@@ -95,7 +98,7 @@ function teamProgressTotals(room) {
   return totals;
 }
 
-/** Duel Mode only: records a round win (by clientId for 1v1, by team letter for 2v2) and ends the match once winsNeeded is reached. */
+/** Duel Mode only: records a round win (by clientId for 1v1 and FFA, by team letter for 2v2) and ends the match once winsNeeded is reached. */
 function resolveDuelRoundWin(room, winnerKey) {
   room.duelWins[winnerKey] = (room.duelWins[winnerKey] ?? 0) + 1;
   const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
@@ -103,6 +106,13 @@ function resolveDuelRoundWin(room, winnerKey) {
   if (room.teamMode) room.winningTeam = winnerKey;
   else room.winnerId = winnerKey;
   room.phase = 'results';
+}
+
+/** How many connected players a duel room needs to start: exactly 2 for 1v1, exactly 4 for Team Duel, 3-4 for FFA. */
+function duelReadyCount(room, count) {
+  if (room.teamMode) return count === 4;
+  if (room.duelFFA) return count >= 3 && count <= 4;
+  return count === 2;
 }
 
 function cleanupRoom(io, room) {
@@ -142,6 +152,7 @@ io.on('connection', (socket) => {
       startAtMs: null,
       winnerId: null,
       teamMode: false,
+      duelFFA: false,
       winningTeam: null,
       suddenDeath: false,
       duelBestOf: 3,
@@ -162,7 +173,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(String(code || '').toUpperCase());
     if (!room) return ack?.({ ok: false, error: 'Room not found' });
     if (room.phase !== 'lobby') return ack?.({ ok: false, error: 'Battle already in progress' });
-    const cap = room.mode === 'duel' ? (room.teamMode ? 4 : 2) : MAX_PLAYERS;
+    const cap = room.mode === 'duel' ? (room.teamMode || room.duelFFA ? 4 : 2) : MAX_PLAYERS;
     if (connectedPlayers(room).length >= cap) {
       return ack?.({ ok: false, error: room.mode === 'duel' ? `Duel room is full (${cap} players)` : 'Room is full' });
     }
@@ -208,10 +219,10 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
     if (mode !== 'song' && mode !== 'sentence' && mode !== 'duel') return;
-    // Duel Mode is 1v1 (or 2v2 with Team Duel on) — refuse to switch into it
-    // with more players already seated than the current mode supports,
-    // mirroring the join-room cap below.
-    if (mode === 'duel' && !room.teamMode && connectedPlayers(room).length > 2) return;
+    // Duel Mode is 1v1 by default (2v2 with Team Duel on, 3-4 with FFA on) —
+    // refuse to switch into it with more players already seated than the
+    // current format supports, mirroring the join-room cap below.
+    if (mode === 'duel' && !room.teamMode && !room.duelFFA && connectedPlayers(room).length > 2) return;
     room.mode = mode;
     room.sentenceText = null;
     if (mode === 'sentence' || mode === 'duel') room.suddenDeath = false;
@@ -235,6 +246,7 @@ io.on('connection', (socket) => {
 
   // Also doubles as the "Team Duel (2v2)" toggle when room.mode === 'duel' —
   // same flag, same 'team' field/select-team handler as racing Team Mode.
+  // Mutually exclusive with duelFFA: turning Team Duel on turns FFA off.
   socket.on('toggle-team-mode', () => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
@@ -243,6 +255,20 @@ io.on('connection', (socket) => {
     // that would leave a 1v1 duel room over its cap.
     if (!next && room.mode === 'duel' && connectedPlayers(room).length > 2) return;
     room.teamMode = next;
+    if (next) room.duelFFA = false;
+    broadcastRoom(io, room);
+  });
+
+  // FFA Duel toggle (duel rooms only) — mutually exclusive with Team Duel.
+  // Unlike Team Duel's exact headcount, FFA just needs 2-4 connected to stay
+  // valid while toggled on; the 3-player minimum is enforced at start-battle.
+  socket.on('toggle-duel-ffa', () => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.mode !== 'duel') return;
+    const next = !room.duelFFA;
+    if (!next && connectedPlayers(room).length > 2) return;
+    room.duelFFA = next;
+    if (next) room.teamMode = false;
     broadcastRoom(io, room);
   });
 
@@ -275,7 +301,7 @@ io.on('connection', (socket) => {
     } else if (!room.songId) {
       return;
     }
-    if (room.mode === 'duel' && connectedPlayers(room).length !== (room.teamMode ? 4 : 2)) return;
+    if (room.mode === 'duel' && !duelReadyCount(room, connectedPlayers(room).length)) return;
     if (room.teamMode) {
       const players = [...room.players.values()];
       const hasA = players.some((p) => p.team === 'A');
@@ -296,6 +322,7 @@ io.on('connection', (socket) => {
       p.result = null;
       p.progress = null;
       p.eliminated = false;
+      p.hp = 1;
     }
     broadcastRoom(io, room);
     setTimeout(() => {
@@ -323,6 +350,8 @@ io.on('connection', (socket) => {
       p.finished = false;
       p.result = null;
       p.progress = null;
+      p.eliminated = false;
+      p.hp = 1;
     }
     broadcastRoom(io, room);
     setTimeout(() => {
@@ -381,11 +410,33 @@ io.on('connection', (socket) => {
   // the actual HP numbers still come from the regular 'progress' broadcast,
   // so a dropped/delayed event here never desyncs anything, just a missed
   // flourish.
-  socket.on('word-struck', () => {
+  socket.on('word-struck', ({ targetId } = {}) => {
     const room = rooms.get(currentRoomCode);
     const player = room?.players.get(socket.id);
     if (!room || room.phase !== 'battle' || !player) return;
-    io.to(room.code).emit('word-struck', { fromId: socket.id });
+    io.to(room.code).emit('word-struck', { fromId: socket.id, targetId: targetId ?? null });
+  });
+
+  // FFA Duel only: a clean word's damage, already routed by the attacker's
+  // client to whoever currently has the lowest HP (see autoTarget in
+  // DuelBattleStage.tsx). Unlike word-struck (purely cosmetic, relayed as-is
+  // for every duel variant), this is server-authoritative — it's the one
+  // place a fighter's hp actually changes, since FFA has no single "other
+  // side" to derive HP from algebraically the way 1v1/2v2 do.
+  socket.on('duel-strike', ({ targetId, amount } = {}) => {
+    const room = rooms.get(currentRoomCode);
+    const player = room?.players.get(socket.id);
+    if (!room || room.phase !== 'battle' || !player || room.mode !== 'duel' || !room.duelFFA) return;
+    const target = room.players.get(targetId);
+    if (!target || target.eliminated || typeof amount !== 'number' || !(amount > 0)) return;
+
+    target.hp = Math.max(0, target.hp - amount);
+    if (target.hp <= 0) {
+      target.eliminated = true;
+      const alive = [...room.players.values()].filter((p) => !p.eliminated);
+      if (alive.length === 1) resolveDuelRoundWin(room, alive[0].clientId);
+    }
+    broadcastRoom(io, room);
   });
 
   // A power-up (Nitro self-boost or a Fog attack on another racer), earned
@@ -440,6 +491,23 @@ io.on('connection', (socket) => {
           roundWinnerTeam = totals.A >= totals.B ? 'A' : 'B';
         }
         if (roundWinnerTeam) resolveDuelRoundWin(room, roundWinnerTeam);
+        broadcastRoom(io, room);
+        return;
+      }
+
+      if (room.duelFFA) {
+        // A fighter reaching 0 hp mid-song already resolved the round via
+        // 'duel-strike' above (phase flips to 'results' there) — the guard
+        // at the top of this handler naturally ignores a late 'finished'
+        // once that's happened. This only still runs once every surviving
+        // (non-eliminated) fighter's song has run out with 2+ still alive,
+        // in which case whoever has the most hp left wins. wonByFinish is
+        // meaningless in FFA (no single personal finish line) and is ignored.
+        const contenders = [...room.players.values()].filter((p) => !p.eliminated);
+        if (contenders.length > 0 && contenders.every((p) => p.finished)) {
+          const winner = contenders.reduce((best, p) => (p.hp > best.hp ? p : best));
+          resolveDuelRoundWin(room, winner.clientId);
+        }
         broadcastRoom(io, room);
         return;
       }

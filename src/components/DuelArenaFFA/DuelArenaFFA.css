@@ -1,0 +1,239 @@
+/* Same night-dojo palette as DuelArena.css, duplicated rather than shared —
+   see the component doc comment for why. */
+.duel-arena-ffa {
+  --dj-night-deep: #050508;
+  --dj-night: #0d0c15;
+  --dj-night-raised: #14121e;
+  --dj-indigo: #221d3d;
+  --dj-steel: #f3f0e4;
+  --dj-gold: #cf9f4f;
+  --dj-gold-dim: #8a713f;
+
+  position: relative;
+  width: min(100%, 640px);
+  height: min(46vh, 360px);
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse 60% 45% at 78% 12%, rgba(207, 159, 79, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--dj-indigo) 0%, var(--dj-night) 46%, var(--dj-night-deep) 100%);
+}
+
+.duel-arena-ffa__moon {
+  position: absolute;
+  top: 8%;
+  right: 10%;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fbf6e4, var(--dj-gold) 70%, rgba(207, 159, 79, 0.15) 100%);
+  box-shadow: 0 0 60px 14px rgba(207, 159, 79, 0.25);
+}
+
+.duel-arena-ffa__kanji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(24vw, 200px);
+  font-weight: 800;
+  color: rgba(243, 240, 228, 0.035);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.duel-arena-ffa__torii {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(60%, 340px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.duel-arena-ffa__mist {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 12%;
+  height: 90px;
+  background: linear-gradient(180deg, transparent, rgba(243, 240, 228, 0.05) 50%, transparent);
+  filter: blur(6px);
+  animation: duel-ffa-mist-drift 26s linear infinite;
+}
+
+.duel-arena-ffa__mist--low {
+  bottom: 4%;
+  height: 50px;
+  animation-duration: 34s;
+  animation-direction: reverse;
+  opacity: 0.7;
+}
+
+@keyframes duel-ffa-mist-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(20%);
+  }
+}
+
+.duel-arena-ffa__ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+  border-top: 1px solid rgba(243, 240, 228, 0.06);
+}
+
+.duel-arena-ffa__petals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.duel-arena-ffa__petal {
+  position: absolute;
+  top: -5%;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #ffb6c8, var(--red-400));
+  border-radius: 2px 6px 2px 6px;
+  animation: duel-ffa-petal-fall linear infinite;
+}
+
+@keyframes duel-ffa-petal-fall {
+  from {
+    transform: translate3d(0, -10%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(var(--drift, 40px), 480%, 0) rotate(340deg);
+  }
+}
+
+.duel-arena-ffa__lineup {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  padding: 0 4% 6%;
+}
+
+.duel-arena-ffa__fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 120px;
+  transition:
+    filter 300ms ease,
+    opacity 300ms ease;
+}
+
+/* Everyone's scaled down a touch from 1v1/2v2's pair so a 4-person lineup still fits comfortably. */
+.duel-arena-ffa__fighter .swordsman {
+  transform: scale(0.82);
+  transform-origin: bottom center;
+}
+
+.duel-arena-ffa__fighter--you .duel-arena-ffa__plate {
+  border-color: var(--red-400);
+}
+
+.duel-arena-ffa__fighter--out {
+  filter: grayscale(0.85) brightness(0.5);
+  opacity: 0.75;
+}
+
+.duel-arena-ffa__plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--dj-night-raised), var(--dj-night));
+  border: 1px solid var(--dj-gold-dim);
+  margin-bottom: 0.5rem;
+  max-width: 100%;
+}
+
+.duel-arena-ffa__plate-name {
+  font-weight: 700;
+  font-size: 0.6875rem;
+  color: var(--dj-steel);
+  white-space: nowrap;
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duel-arena-ffa__plate-hp {
+  display: block;
+  width: 64px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  border: 1px solid rgba(243, 240, 228, 0.12);
+}
+
+.duel-arena-ffa__plate-hp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--red-500), var(--red-400));
+  transition: width 480ms cubic-bezier(0.22, 0.68, 0, 1.4);
+}
+
+.duel-arena-ffa--shake {
+  animation: duel-arena-ffa-shake 260ms ease-out;
+}
+
+@keyframes duel-arena-ffa-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6px, 3px);
+  }
+  40% {
+    transform: translate(5px, -3px);
+  }
+  60% {
+    transform: translate(-4px, 2px);
+  }
+  80% {
+    transform: translate(3px, -2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duel-arena-ffa__mist,
+  .duel-arena-ffa__petal,
+  .duel-arena-ffa--shake {
+    animation: none !important;
+  }
+  .duel-arena-ffa__fighter {
+    transition: none;
+  }
+}
+
+:root[data-reduce-motion='true'] .duel-arena-ffa__mist,
+:root[data-reduce-motion='true'] .duel-arena-ffa__petal,
+:root[data-reduce-motion='true'] .duel-arena-ffa--shake {
+  animation: none !important;
+}
+
+:root[data-reduce-motion='true'] .duel-arena-ffa__fighter {
+  transition: none;
+}

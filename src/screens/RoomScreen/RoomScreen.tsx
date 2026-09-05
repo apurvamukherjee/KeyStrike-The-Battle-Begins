@@ -56,8 +56,12 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
   };
   const teamsReady = !room.teamMode || (teamCounts.A > 0 && teamCounts.B > 0);
   const connectedCount = room.players.filter((p) => p.connected).length;
-  const duelCap = room.teamMode ? 4 : 2;
-  const duelReady = room.mode !== 'duel' || connectedCount === duelCap;
+  const duelFormat: 'ffa' | '2v2' | '1v1' = room.duelFFA ? 'ffa' : room.teamMode ? '2v2' : '1v1';
+  const duelFormatLabel = duelFormat === 'ffa' ? 'FFA Duel' : duelFormat === '2v2' ? 'Team Duel' : 'Duel Mode';
+  const duelCapLabel = duelFormat === 'ffa' ? '3-4' : duelFormat === '2v2' ? '4' : '2';
+  const duelReady =
+    room.mode !== 'duel' ||
+    (duelFormat === 'ffa' ? connectedCount >= 3 && connectedCount <= 4 : duelFormat === '2v2' ? connectedCount === 4 : connectedCount === 2);
 
   return (
     <div className="screen">
@@ -68,7 +72,13 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         </button>
       </h1>
       <p className="tagline">
-        Share this code — {room.mode === 'duel' ? `exactly ${duelCap} players` : 'up to 4 players'}.
+        Share this code —{' '}
+        {room.mode === 'duel'
+          ? duelFormat === 'ffa'
+            ? `${duelCapLabel} players`
+            : `exactly ${duelCapLabel} players`
+          : 'up to 4 players'}
+        .
       </p>
 
       <div className="panel room__panel">
@@ -116,6 +126,15 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
             >
               {room.mode === 'duel' ? 'Team Duel (2v2)' : 'Team Mode'}: {room.teamMode ? 'On' : 'Off'}
             </button>
+            {room.mode === 'duel' && (
+              <button
+                type="button"
+                className={`room__team-mode-toggle${room.duelFFA ? ' room__team-mode-toggle--active' : ''}`}
+                onClick={() => client.toggleDuelFFA()}
+              >
+                FFA Duel (3-4): {room.duelFFA ? 'On' : 'Off'}
+              </button>
+            )}
             {room.mode === 'song' && (
               <button
                 type="button"
@@ -133,8 +152,12 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         {room.mode === 'duel' && (
           <p className="room__hint">
             {duelReady
-              ? `${room.teamMode ? 'Team Duel' : 'Duel Mode'} — first side to fully strike the other down wins.`
-              : `${room.teamMode ? 'Team Duel' : 'Duel Mode'} needs exactly ${duelCap} players to start.`}
+              ? duelFormat === 'ffa'
+                ? `${duelFormatLabel} — last fighter standing wins the round.`
+                : `${duelFormatLabel} — first side to fully strike the other down wins.`
+              : duelFormat === 'ffa'
+                ? `${duelFormatLabel} needs ${duelCapLabel} players to start.`
+                : `${duelFormatLabel} needs exactly ${duelCapLabel} players to start.`}
           </p>
         )}
 

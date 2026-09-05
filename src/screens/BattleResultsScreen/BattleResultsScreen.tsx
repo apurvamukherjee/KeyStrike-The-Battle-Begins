@@ -122,6 +122,35 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
       );
     }
 
+    if (room.duelFFA) {
+      const me = room.players.find((p) => p.id === client.id);
+      if (!me) return null;
+      const iWon = me.clientId === room.winnerId;
+      const others = room.players.filter((p) => p.id !== client.id);
+      // DuelResultsScreen is built for a you-vs-one shape — FFA's 3-4-way
+      // result compresses onto that same card as "you vs the winner," or (if
+      // you won) "you vs your closest rival by remaining hp."
+      const rival = iWon
+        ? others.reduce<RoomPlayer | undefined>((best, p) => (!best || p.hp > best.hp ? p : best), undefined)
+        : room.players.find((p) => p.clientId === room.winnerId);
+      if (!rival) return null;
+      return (
+        <DuelResultsScreen
+          won={iWon}
+          youNickname={me.nickname}
+          youAvatarIndex={me.avatarIndex}
+          opponentNickname={rival.nickname}
+          opponentAvatarIndex={rival.avatarIndex}
+          youStats={me.result ?? zeroStats}
+          opponentStats={rival.result ?? zeroStats}
+          matchScore={{ you: room.duelWins[me.clientId] ?? 0, opponent: room.duelWins[rival.clientId] ?? 0 }}
+          winsNeeded={winsNeeded}
+          matchOver={room.duelMatchOver}
+          {...nextRoundHandlers}
+        />
+      );
+    }
+
     const me = room.players.find((p) => p.id === client.id);
     const opponent = room.players.find((p) => p.id !== client.id);
     if (!me || !opponent) return null;

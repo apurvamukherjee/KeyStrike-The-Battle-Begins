@@ -10,6 +10,8 @@ import './DuelArena.css';
 export interface DuelStrike {
   /** Must match one of `racers[].id`. */
   strikerId: string;
+  /** FFA Duel only — which fighter got hit, so DuelArenaFFA can play their hit-flash. Unused here since 1v1/2v2 always infer "the other side." */
+  targetId?: string;
   seq: number;
 }
 

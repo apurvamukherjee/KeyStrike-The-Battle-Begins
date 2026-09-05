@@ -14,6 +14,7 @@ import { getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import type { Racer } from '../../components/RaceTrack/RaceTrack';
 import DuelArena, { type DuelStrike } from '../../components/DuelArena/DuelArena';
+import DuelArenaFFA from '../../components/DuelArenaFFA/DuelArenaFFA';
 import WordStage from '../GameplayScreen/WordStage';
 
 const LETTER_RE = /^[a-zA-Z]$/;
@@ -110,6 +111,13 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
   const racersRef = useRef(racers);
   racersRef.current = racers;
 
+  // FFA Duel: autoTarget() needs the live hp/eliminated state of every
+  // player, which only ever arrives via fresh room-update broadcasts — the
+  // battle-run effect below doesn't re-run on every one of those (same
+  // staleness reason racersRef exists above).
+  const roomPlayersRef = useRef(room.players);
+  roomPlayersRef.current = room.players;
+
   useEffect(() => {
     const song = getSongById(room.songId ?? '');
     if (!song) {
@@ -134,7 +142,8 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     const startAt = ctx.currentTime + Math.max(0, localDelayMs) / 1000;
     const durationSec = song.durationSec;
     const reactiveLayers = scheduleSong(ctx, song, startAt, masterGain);
-    const powerUpsEnabled = !room.teamMode;
+    const isFFA = room.duelFFA;
+    const powerUpsEnabled = !room.teamMode && !room.duelFFA;
 
     // Team Duel: DuelArena renders one racer per SIDE (team-A/team-B, already
     // combined by BattleScreen's team-progress-summing), so a strike has to
@@ -148,6 +157,13 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       return p?.team ? `team-${p.team}` : playerId;
     }
     const myFighterId = fighterIdFor(client.id);
+
+    /** FFA Duel: every clean word (and miss) auto-targets whoever currently has the lowest hp — no manual targeting needed, just type. */
+    function autoTarget(): { id: string } | null {
+      const candidates = roomPlayersRef.current.filter((p) => p.id !== client.id && !p.eliminated);
+      if (candidates.length === 0) return null;
+      return candidates.reduce((lowest, p) => (p.hp < lowest.hp ? p : lowest));
+    }
 
     let finished = false;
     let raf = 0;
@@ -182,7 +198,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       teardown();
     }
 
-    function bumpHud(judgement: Judgement) {
+    function bumpHud(judgement: Judgement, targetId?: string) {
       const milestoneIndex = COMBO_MILESTONES.indexOf(runner.combo);
       const hitNewMilestone = judgement !== 'miss' && milestoneIndex !== -1 && milestoneIndex >= comboMilestonesHit;
       if (hitNewMilestone) comboMilestonesHit = milestoneIndex + 1;
@@ -200,7 +216,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       // opponent's screen can play the same swing. A miss doesn't swing.
       if (judgement !== 'miss') {
         playChime(ctx, fxGain, 'clash');
-        client.sendWordStruck();
+        client.sendWordStruck(targetId);
       }
 
       setHud((h) => ({
@@ -213,11 +229,24 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
         heldPowerUp,
-        strike: judgement !== 'miss' ? { strikerId: myFighterId, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
+        strike: judgement !== 'miss' ? { strikerId: myFighterId, targetId, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
       }));
     }
 
-    function advanceCar(judgement: Judgement) {
+    /**
+     * FFA Duel: there's no personal finish line — every clean word (and
+     * miss, at a smaller amount) redirects as damage to autoTarget()'s
+     * fighter instead of accumulating toward my own win. Reuses
+     * advanceCarProgress exactly as 1v1/2v2 do, just called fresh from 0
+     * each time (never accumulated) so a strong typer's output never caps
+     * out mid-round the way a real finish-line progress value would.
+     */
+    function advanceCar(judgement: Judgement, target: { id: string } | null) {
+      if (isFFA) {
+        const amount = advanceCarProgress(0, totalWords, judgement, runner.multiplier());
+        if (target) client.sendDuelStrike(target.id, amount);
+        return;
+      }
       progress = advanceCarProgress(progress, totalWords, judgement, runner.multiplier());
       onCarProgress(progress);
       if (progress >= 1) finishDuel(true);
@@ -257,7 +286,10 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     function handleWordStruck(event: WordStruckEvent) {
       if (event.fromId === client.id) return;
       playChime(ctx, fxGain, 'clash');
-      setHud((h) => ({ ...h, strike: { strikerId: fighterIdFor(event.fromId), seq: (h.strike?.seq ?? 0) + 1 } }));
+      setHud((h) => ({
+        ...h,
+        strike: { strikerId: fighterIdFor(event.fromId), targetId: event.targetId ?? undefined, seq: (h.strike?.seq ?? 0) + 1 },
+      }));
     }
 
     function activatePowerUp() {
@@ -294,8 +326,9 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       playChime(ctx, fxGain, 'key');
       if (result.type === 'wordComplete') {
         playChime(ctx, fxGain, result.judgement);
-        bumpHud(result.judgement);
-        advanceCar(result.judgement);
+        const target = isFFA ? autoTarget() : null;
+        bumpHud(result.judgement, target?.id);
+        advanceCar(result.judgement, target);
       }
     }
 
@@ -346,8 +379,9 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
 
         if (runner.sweepMisses(judgeTime)) {
           playChime(ctx, fxGain, 'miss');
-          bumpHud('miss');
-          advanceCar('miss');
+          const target = isFFA ? autoTarget() : null;
+          bumpHud('miss', target?.id);
+          advanceCar('miss', target);
         }
 
         const active = runner.activeWord;
@@ -403,6 +437,18 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
             return opponentPlayer ? (room.duelWins[opponentPlayer.clientId] ?? 0) : 0;
           })(),
         };
+
+  // FFA Duel renders from room.players directly (needs hp/eliminated per
+  // fighter, which the generic `racers` prop — built for racing/1v1/2v2 —
+  // doesn't carry) rather than the shared DuelArena's left/right pair.
+  const fighters = room.players.map((p) => ({
+    id: p.id,
+    nickname: p.nickname,
+    avatarIndex: p.avatarIndex,
+    hp: p.hp,
+    eliminated: p.eliminated,
+    isYou: p.id === client.id,
+  }));
 
   return (
     <>
@@ -471,7 +517,11 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
         )}
       </div>
 
-      <DuelArena racers={racers} strike={hud.strike} matchScore={matchScore} />
+      {room.duelFFA ? (
+        <DuelArenaFFA fighters={fighters} strike={hud.strike} />
+      ) : (
+        <DuelArena racers={racers} strike={hud.strike} matchScore={matchScore} />
+      )}
 
       <div className="gameplay-body">
         <WordStage
