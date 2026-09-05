@@ -68,4 +68,12 @@ export type ScreenState =
   | { name: 'battle'; client: RoomClient; room: RoomState }
   | { name: 'battleResults'; client: RoomClient; room: RoomState }
   | { name: 'duelSelect' }
-  | { name: 'duel'; songId: string; difficulty: Difficulty; enemyId: string; attempt: number };
+  | {
+      name: 'duel';
+      songId: string;
+      difficulty: Difficulty;
+      enemyId: string;
+      attempt: number;
+      /** Round wins so far this best-of-3 match against this enemy — {you:0,enemy:0} for a fresh fight from the ladder. */
+      matchScore: { you: number; enemy: number };
+    };

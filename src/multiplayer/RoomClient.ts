@@ -96,6 +96,11 @@ export class RoomClient {
     this.socket.emit('start-battle', { sentenceText });
   }
 
+  /** Duel Mode only: starts the next round of an in-progress best-of-N match, preserving the running duelWins tally. */
+  nextRound(songId: string) {
+    this.socket.emit('next-round', { songId });
+  }
+
   sendProgress(progress: PlayerProgress) {
     this.socket.emit('progress', progress);
   }

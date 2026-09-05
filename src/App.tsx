@@ -33,7 +33,14 @@ type Action =
   | { type: 'GO_STATS' }
   | { type: 'GO_LOBBY' }
   | { type: 'GO_DUEL_SELECT' }
-  | { type: 'START_DUEL'; songId: string; difficulty: Difficulty; enemyId: string }
+  | {
+      type: 'START_DUEL';
+      songId: string;
+      difficulty: Difficulty;
+      enemyId: string;
+      /** Omitted for a fresh fight from the ladder — defaults to 0-0. Passed explicitly to continue an in-progress match's round tally. */
+      matchScore?: { you: number; enemy: number };
+    }
   | { type: 'START_SONG'; songId: string; difficulty: Difficulty; beatChallenge: boolean }
   | { type: 'START_PRACTICE'; songId: string; difficulty: Difficulty }
   | { type: 'FINISH_SONG'; result: RunResult }
@@ -69,6 +76,7 @@ function reducer(state: ScreenState, action: Action): ScreenState {
         difficulty: action.difficulty,
         enemyId: action.enemyId,
         attempt: Date.now(),
+        matchScore: action.matchScore ?? { you: 0, enemy: 0 },
       };
     case 'START_SONG':
       return { name: 'playing', songId: action.songId, difficulty: action.difficulty, beatChallenge: action.beatChallenge };
@@ -221,14 +229,16 @@ export default function App() {
           songId={screen.songId}
           difficulty={screen.difficulty}
           enemyId={screen.enemyId}
+          matchScore={screen.matchScore}
           onExit={goDuelSelect}
-          onRematch={() =>
+          onAdvance={(matchScore) =>
             dispatch({
               type: 'START_DUEL',
-              // A fresh random song each rematch, same as picking "Fight" again from the ladder.
+              // A fresh random song each round, same as picking "Fight" again from the ladder.
               songId: songs[Math.floor(Math.random() * songs.length)].id,
               difficulty: screen.difficulty,
               enemyId: screen.enemyId,
+              matchScore,
             })
           }
         />
@@ -275,6 +285,7 @@ export default function App() {
           client={screen.client}
           room={screen.room}
           onRematch={() => dispatch({ type: 'ENTER_ROOM', client: screen.client, room: screen.room })}
+          onEnterBattle={(room) => dispatch({ type: 'ENTER_BATTLE', client: screen.client, room })}
           onLeave={goHome}
         />
       )}

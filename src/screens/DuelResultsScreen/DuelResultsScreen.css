@@ -66,6 +66,13 @@
   text-shadow: 0 0 20px var(--red-glow);
 }
 
+.duel-results__match-score {
+  margin: -0.5rem 0 0;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
 .duel-results__opponent-stats {
   display: flex;
   justify-content: space-between;

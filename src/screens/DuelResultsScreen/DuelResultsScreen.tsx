@@ -12,6 +12,11 @@ interface DuelStats {
   maxCombo: number;
 }
 
+interface MatchScore {
+  you: number;
+  opponent: number;
+}
+
 interface DuelResultsScreenProps {
   won: boolean;
   youNickname: string;
@@ -21,7 +26,15 @@ interface DuelResultsScreenProps {
   youStats: DuelStats;
   /** Omitted for a CPU opponent — a simulated fighter has no score of its own worth showing. */
   opponentStats?: DuelStats;
-  /** Omitted in multiplayer for a non-host — only the host can actually restart a shared room, mirroring BattleResultsScreen. */
+  /** Round wins so far this best-of-N match — omit entirely for a single, non-match duel. */
+  matchScore?: MatchScore;
+  /** Wins needed to take the whole match — only meaningful alongside matchScore. */
+  winsNeeded?: number;
+  /** True once the match itself (not just this round) is decided. */
+  matchOver?: boolean;
+  /** Present only when the match isn't over yet and this viewer can advance it (mid-match). */
+  onNextRound?: () => void;
+  /** Omitted in multiplayer for a non-host — only the host can actually restart a shared room, mirroring BattleResultsScreen. Also used to start a fresh match once matchOver. */
   onRematch?: () => void;
   onLeave: () => void;
   leaveLabel?: string;
@@ -35,6 +48,10 @@ export default function DuelResultsScreen({
   opponentAvatarIndex,
   youStats,
   opponentStats,
+  matchScore,
+  winsNeeded,
+  matchOver,
+  onNextRound,
   onRematch,
   onLeave,
   leaveLabel,
@@ -102,6 +119,13 @@ export default function DuelResultsScreen({
         {won ? `You struck down ${opponentNickname}.` : `${opponentNickname} proved too fast this time.`}
       </p>
 
+      {matchScore && (
+        <p className="duel-results__match-score">
+          {matchOver ? 'Match won' : 'Match'}: You {matchScore.you} – {matchScore.opponent} {opponentNickname}
+          {winsNeeded ? ` (first to ${winsNeeded})` : ''}
+        </p>
+      )}
+
       <div className="panel results__panel">
         <div className="results__stats">
           <div className="results__stat">
@@ -129,12 +153,17 @@ export default function DuelResultsScreen({
       </div>
 
       <div className="cap-row">
+        {onNextRound && (
+          <button type="button" className="cap cap--primary" onClick={onNextRound}>
+            Next Round
+          </button>
+        )}
         {onRematch && (
-          <button type="button" className="cap cap--primary" onClick={onRematch}>
+          <button type="button" className={onNextRound ? 'cap' : 'cap cap--primary'} onClick={onRematch}>
             Rematch
           </button>
         )}
-        <button type="button" className={onRematch ? 'cap' : 'cap cap--primary'} onClick={onLeave}>
+        <button type="button" className={onNextRound || onRematch ? 'cap' : 'cap cap--primary'} onClick={onLeave}>
           {leaveLabel ?? 'Leave'}
         </button>
       </div>

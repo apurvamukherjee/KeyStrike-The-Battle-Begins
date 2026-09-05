@@ -58,6 +58,9 @@ function publicRoom(room) {
     teamMode: room.teamMode,
     winningTeam: room.winningTeam,
     suddenDeath: room.suddenDeath,
+    duelBestOf: room.duelBestOf,
+    duelWins: room.duelWins,
+    duelMatchOver: room.duelMatchOver,
     players: [...room.players.values()].map((p) => ({
       id: p.id,
       nickname: p.nickname,
@@ -121,6 +124,9 @@ io.on('connection', (socket) => {
       teamMode: false,
       winningTeam: null,
       suddenDeath: false,
+      duelBestOf: 3,
+      duelWins: {}, // { [playerId]: number of rounds won } — only meaningful when mode === 'duel'
+      duelMatchOver: false,
       players: new Map(),
       finishTimeout: null,
       touchedAt: Date.now(),
@@ -254,11 +260,42 @@ io.on('connection', (socket) => {
     room.startAtMs = Date.now() + 3000;
     room.winnerId = null;
     room.winningTeam = null;
+    // A fresh trip through the lobby (first round, or a full Rematch) always
+    // starts a new best-of-N match at 0-0 — next-round is the one path that
+    // preserves an in-progress duelWins tally.
+    room.duelWins = {};
+    room.duelMatchOver = false;
     for (const p of room.players.values()) {
       p.finished = false;
       p.result = null;
       p.progress = null;
       p.eliminated = false;
+    }
+    broadcastRoom(io, room);
+    setTimeout(() => {
+      if (rooms.get(currentRoomCode) === room && room.phase === 'countdown') {
+        room.phase = 'battle';
+        broadcastRoom(io, room);
+      }
+    }, 3000);
+  });
+
+  // Duel Mode only: starts the next round of an in-progress best-of-N match
+  // without leaving the room — same countdown/reset shape as start-battle,
+  // but preserves duelWins and doesn't need team/sentence validation.
+  socket.on('next-round', ({ songId } = {}) => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostId !== socket.id || room.phase !== 'results') return;
+    if (room.mode !== 'duel' || room.duelMatchOver) return;
+    if (typeof songId === 'string') room.songId = songId;
+
+    room.phase = 'countdown';
+    room.startAtMs = Date.now() + 3000;
+    room.winnerId = null;
+    for (const p of room.players.values()) {
+      p.finished = false;
+      p.result = null;
+      p.progress = null;
     }
     broadcastRoom(io, room);
     setTimeout(() => {
@@ -354,12 +391,18 @@ io.on('connection', (socket) => {
     // fighter too, then whoever dealt more damage (higher carProgress from
     // the regular progress broadcast) wins.
     if (room.mode === 'duel') {
+      let roundWinnerId = null;
       if (result.wonByFinish) {
-        room.phase = 'results';
-        room.winnerId = socket.id;
+        roundWinnerId = socket.id;
       } else if ([...room.players.values()].every((p) => p.finished)) {
         const [a, b] = [...room.players.values()];
-        room.winnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.id : b.id;
+        roundWinnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.id : b.id;
+      }
+      if (roundWinnerId) {
+        room.duelWins[roundWinnerId] = (room.duelWins[roundWinnerId] ?? 0) + 1;
+        const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
+        room.duelMatchOver = room.duelWins[roundWinnerId] >= winsNeeded;
+        room.winnerId = roundWinnerId;
         room.phase = 'results';
       }
       broadcastRoom(io, room);

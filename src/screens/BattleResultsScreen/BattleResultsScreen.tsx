@@ -4,6 +4,7 @@ import { clearPendingSession } from '../../multiplayer/session';
 import type { RoomPlayer, RoomState, Team } from '../../multiplayer/types';
 import Avatar from '../../components/Avatar/Avatar';
 import DuelResultsScreen from '../DuelResultsScreen/DuelResultsScreen';
+import { songs } from '../../data/songs';
 import { formatScore } from '../../utils/format';
 import { recordBattleOutcome, type StreakRecord } from '../../utils/winStreak';
 import './BattleResultsScreen.css';
@@ -12,6 +13,8 @@ interface BattleResultsScreenProps {
   client: RoomClient;
   room: RoomState;
   onRematch: () => void;
+  /** Duel Mode's "Next Round" lands here directly (skipping the lobby) once the room comes back to countdown/battle — mirrors RoomScreen's own onRoomUpdate watch, since this screen replaces BattleScreen (and its listener) the moment results appear. */
+  onEnterBattle: (room: RoomState) => void;
   onLeave: () => void;
 }
 
@@ -38,7 +41,7 @@ function PlayerRow({ p, isYou }: { p: RoomPlayer; isYou: boolean }) {
   );
 }
 
-export default function BattleResultsScreen({ client, room, onRematch, onLeave }: BattleResultsScreenProps) {
+export default function BattleResultsScreen({ client, room, onRematch, onEnterBattle, onLeave }: BattleResultsScreenProps) {
   const isHost = client.id === room.hostId;
   const [streak, setStreak] = useState<StreakRecord | null>(null);
 
@@ -52,12 +55,24 @@ export default function BattleResultsScreen({ client, room, onRematch, onLeave }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Duel Mode's "Next Round" advances the room straight from here (no lobby
+  // stop) — BattleScreen's own onRoomUpdate listener is gone the moment this
+  // screen mounted, so this is the one still watching for the room coming
+  // back to countdown/battle to hand the app back into a live duel.
+  useEffect(() => {
+    client.setOnRoomUpdate((next) => {
+      if (next.phase === 'countdown' || next.phase === 'battle') onEnterBattle(next);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client]);
+
   if (room.mode === 'duel') {
     const me = room.players.find((p) => p.id === client.id);
     const opponent = room.players.find((p) => p.id !== client.id);
     if (!me || !opponent) return null;
     const won = me.id === room.winnerId;
     const zeroStats = { score: 0, accuracy: 0, maxCombo: 0 };
+    const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
     return (
       <DuelResultsScreen
         won={won}
@@ -67,7 +82,15 @@ export default function BattleResultsScreen({ client, room, onRematch, onLeave }
         opponentAvatarIndex={opponent.avatarIndex}
         youStats={me.result ?? zeroStats}
         opponentStats={opponent.result ?? zeroStats}
-        onRematch={isHost ? onRematch : undefined}
+        matchScore={{ you: room.duelWins[me.id] ?? 0, opponent: room.duelWins[opponent.id] ?? 0 }}
+        winsNeeded={winsNeeded}
+        matchOver={room.duelMatchOver}
+        onNextRound={
+          isHost && !room.duelMatchOver
+            ? () => client.nextRound(songs[Math.floor(Math.random() * songs.length)].id)
+            : undefined
+        }
+        onRematch={isHost && room.duelMatchOver ? onRematch : undefined}
         onLeave={() => {
           client.leaveRoom();
           client.destroy();

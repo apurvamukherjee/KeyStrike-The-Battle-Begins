@@ -353,6 +353,9 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.songId, room.difficulty]);
 
+  const opponentId = racers.find((r) => r.id !== client.id)?.id;
+  const matchScore = { you: room.duelWins[client.id] ?? 0, opponent: opponentId ? (room.duelWins[opponentId] ?? 0) : 0 };
+
   return (
     <>
       <div className="gameplay-hud">
@@ -378,7 +381,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
         )}
       </div>
 
-      <DuelArena racers={racers} strike={hud.strike} />
+      <DuelArena racers={racers} strike={hud.strike} matchScore={matchScore} />
 
       <div className="gameplay-body">
         <WordStage

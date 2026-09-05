@@ -17,6 +17,8 @@ interface DuelArenaProps {
   /** Exactly two racers — Duel Mode is 1v1 only for this first version. */
   racers: Racer[];
   strike?: DuelStrike | null;
+  /** Round wins so far this best-of-N match — omit for a single, non-match duel. Shown live, not just on the results screen, so the stakes of the current round are always visible. */
+  matchScore?: { you: number; opponent: number };
 }
 
 type Side = 'left' | 'right';
@@ -26,7 +28,7 @@ const DIR: Record<Side, number> = { left: 1, right: -1 };
 const PETAL_COUNT = 14;
 
 
-export default function DuelArena({ racers, strike }: DuelArenaProps) {
+export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps) {
   const [left, right] = racers;
 
   const scopeRef = useRef<HTMLDivElement>(null);
@@ -197,6 +199,11 @@ export default function DuelArena({ racers, strike }: DuelArenaProps) {
       </div>
 
       <div className="duel-arena__vs">VS</div>
+      {matchScore && (
+        <div className="duel-arena__match-score" aria-label="Match score">
+          {matchScore.you} – {matchScore.opponent}
+        </div>
+      )}
 
       <div className="duel-arena__duel">
         <div

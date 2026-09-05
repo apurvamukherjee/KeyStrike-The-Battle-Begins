@@ -24,12 +24,20 @@ const QUEUE_PREVIEW = 3;
 const COMBO_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500];
 const CPU_ID = 'cpu';
 
+interface MatchScore {
+  you: number;
+  enemy: number;
+}
+
 interface DuelScreenProps {
   songId: string;
   difficulty: Difficulty;
   enemyId: string;
+  /** Round wins so far this best-of-3 match — {you:0,enemy:0} for a fresh fight from the ladder. */
+  matchScore: MatchScore;
   onExit: () => void;
-  onRematch: () => void;
+  /** Starts the next attempt (either the next round of this match, or a fresh 0-0 rematch) with the given score. */
+  onAdvance: (matchScore: MatchScore) => void;
 }
 
 interface ResultStats {
@@ -37,6 +45,9 @@ interface ResultStats {
   accuracy: number;
   maxCombo: number;
 }
+
+/** Best of 3 — first to 2 round wins takes the match and the ladder rank. */
+const WINS_NEEDED = 2;
 
 interface HudState {
   score: number;
@@ -69,7 +80,7 @@ const INITIAL_HUD: HudState = {
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
-export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRematch }: DuelScreenProps) {
+export default function DuelScreen({ songId, difficulty, enemyId, matchScore, onExit, onAdvance }: DuelScreenProps) {
   const enemy = getEnemyById(enemyId);
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
@@ -138,7 +149,12 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRema
       fxGain.disconnect();
       teardown();
 
-      if (won) recordDuelWin(activeEnemy.id);
+      // Ladder progress only advances on winning the whole best-of-3 match,
+      // not a single round — matchScore is this screen's OWN props, fixed
+      // for its lifetime, so the round just decided is exactly what tips it.
+      const nextYouWins = matchScore.you + (won ? 1 : 0);
+      if (won && nextYouWins >= WINS_NEEDED) recordDuelWin(activeEnemy.id);
+
       const longestCleared = runner.words
         .filter((w) => w.judgement === 'perfect' || w.judgement === 'good')
         .reduce((longest, w) => (w.note.word.length > longest.length ? w.note.word : longest), '');
@@ -330,6 +346,11 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRema
   if (!enemy) return null;
 
   if (outcome && resultStats) {
+    const nextScore: MatchScore = {
+      you: matchScore.you + (outcome === 'won' ? 1 : 0),
+      enemy: matchScore.enemy + (outcome === 'lost' ? 1 : 0),
+    };
+    const matchOver = nextScore.you >= WINS_NEEDED || nextScore.enemy >= WINS_NEEDED;
     return (
       <DuelResultsScreen
         won={outcome === 'won'}
@@ -338,7 +359,11 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRema
         opponentNickname={enemy.name}
         opponentAvatarIndex={enemy.swordsmanIndex}
         youStats={resultStats}
-        onRematch={onRematch}
+        matchScore={{ you: nextScore.you, opponent: nextScore.enemy }}
+        winsNeeded={WINS_NEEDED}
+        matchOver={matchOver}
+        onNextRound={matchOver ? undefined : () => onAdvance(nextScore)}
+        onRematch={matchOver ? () => onAdvance({ you: 0, enemy: 0 }) : undefined}
         onLeave={onExit}
         leaveLabel="Back to the Ladder"
       />
@@ -362,7 +387,13 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit, onRema
         </div>
       </div>
 
-      {racers && <DuelArena racers={racers} strike={hud.strike} />}
+      {racers && (
+        <DuelArena
+          racers={racers}
+          strike={hud.strike}
+          matchScore={{ you: matchScore.you, opponent: matchScore.enemy }}
+        />
+      )}
 
       <div className="gameplay-body">
         <WordStage

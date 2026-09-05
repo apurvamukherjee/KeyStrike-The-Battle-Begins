@@ -136,6 +136,21 @@
   opacity: 0.9;
 }
 
+.duel-arena__match-score {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translateX(-50%);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--dj-steel);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--dj-gold-dim);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.5rem;
+}
+
 .duel-arena__duel {
   position: absolute;
   inset: 0;

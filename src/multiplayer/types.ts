@@ -65,6 +65,12 @@ export interface RoomState {
   teamMode: boolean;
   winningTeam: Team | null;
   suddenDeath: boolean;
+  /** Duel Mode only: rounds needed to decide a match (first to `ceil(duelBestOf/2)` round wins). */
+  duelBestOf: number;
+  /** Duel Mode only: round wins so far this match, keyed by player id. */
+  duelWins: Record<string, number>;
+  /** Duel Mode only: true once someone has reached the wins needed to take the whole match. */
+  duelMatchOver: boolean;
   players: RoomPlayer[];
 }
 
