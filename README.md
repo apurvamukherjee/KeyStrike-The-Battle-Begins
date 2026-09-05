@@ -9,8 +9,8 @@
 <p align="center"><em>Your keyboard, turned into the fastest weapon in the room.</em></p>
 
 Type the word before the clock runs out. That's the whole rule — and underneath
-it is a rhythm game, a four-player race, and a running record of your own best
-self, all sharing one deceptively simple mechanic.
+it is a rhythm game, a four-player race, a moonlit sword duel, and a running
+record of your own best self, all sharing one deceptively simple mechanic.
 
 ## Why KeyStrike exists
 
@@ -25,6 +25,11 @@ few and it falls back to quiet. Land enough clean words in a row and you bank a
 strike you can use to burst ahead of a rival or blur their view mid-race. Come
 back the next day and your own best run from last night is waiting on the
 track as a ghost, there to be beaten.
+
+Or leave the track behind entirely and step into a dojo at night — torii gate,
+falling sakura, a rival across the mat — where every clean word isn't a lap,
+it's a sword strike. Land enough of them before they land theirs and you take
+the round; take two rounds and you take the match.
 
 None of it asks for an account. A race with friends is a four-letter code,
 typed in and shared — nobody signs up, nobody installs anything, and the game
@@ -41,8 +46,11 @@ up in ten seconds and to still have new ground to cover a hundred races later.
 | **Battle** | Race up to three friends on a shared 4-letter code — first car to the line wins | Multiplayer |
 | **Team Battles** | Pair up 2-on-2 behind one shared car; your combined pace is the only thing that matters | Multiplayer |
 | **Sudden Death** | One miss crashes you out of the race for good — survive to keep a shot at winning | Multiplayer |
-| **Power-Ups** | Bank a hot streak into Nitro for a burst of speed, or Fog to blur a rival's view | Multiplayer |
+| **Power-Ups** | Bank a hot streak into an instant burst of speed, or a blinding counter-attack on your rival | Multiplayer |
 | **Ghost Rivals** | Your best-ever run comes back as a translucent rival car every time you replay a track | Solo |
+| **Duel Mode** | Face a rival across a moonlit dojo — every clean word is a sword strike, first to fully land theirs wins | Solo & Multiplayer |
+| **Duel Ladder** | Climb a five-rival gauntlet, from a wandering ronin to a horned warlord, unlocking the next by winning a match | Solo |
+| **Best-of-3 Matches** | A duel is decided over up to three rounds, with the running score tracked live on screen | Solo & Multiplayer |
 | **Living Music** | The backing track intensifies in real time as your combo climbs, and eases off when it breaks | Everywhere |
 | **Stats & Heatmap** | Lifetime totals, plus a key-by-key map of exactly where you're fast and where you fumble | Solo |
 | **Accessibility Suite** | Game speed, a colorblind-safe palette, reduced motion, and adjustable text size | Everywhere |
