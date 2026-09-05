@@ -77,7 +77,7 @@ function isNoise(wave: Waveform): wave is 'noise' {
   return wave === 'noise';
 }
 
-export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss' | 'onbeat' | 'nitro' | 'fog';
+export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss' | 'onbeat' | 'nitro' | 'fog' | 'clash';
 
 const CHIME_FREQ: Record<ChimeKind, number> = {
   key: 1200,
@@ -87,6 +87,7 @@ const CHIME_FREQ: Record<ChimeKind, number> = {
   onbeat: 1600,
   nitro: 1100,
   fog: 340,
+  clash: 2200,
 };
 
 /**
@@ -97,12 +98,12 @@ const CHIME_FREQ: Record<ChimeKind, number> = {
  */
 export function playChime(ctx: AudioContext, destination: AudioNode, kind: ChimeKind) {
   const osc = ctx.createOscillator();
-  osc.type = kind === 'miss' ? 'sawtooth' : 'square';
+  osc.type = kind === 'miss' || kind === 'clash' ? 'sawtooth' : 'square';
   osc.frequency.value = CHIME_FREQ[kind];
 
   const gain = ctx.createGain();
   const peak = kind === 'key' ? 0.12 : 0.22;
-  const duration = kind === 'key' ? 0.05 : kind === 'miss' ? 0.16 : 0.09;
+  const duration = kind === 'key' ? 0.05 : kind === 'miss' ? 0.16 : kind === 'clash' ? 0.045 : 0.09;
   const now = ctx.currentTime;
 
   gain.gain.setValueAtTime(peak, now);

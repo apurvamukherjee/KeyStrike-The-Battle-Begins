@@ -25,7 +25,16 @@ const DIR: Record<Side, number> = { left: 1, right: -1 };
 const PETAL_COUNT = 14;
 
 function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof window === 'undefined') return false;
+  // Respects both the OS-level setting and the app's own in-Settings toggle
+  // (utils/settings.ts sets this dataset attribute on the root) — every other
+  // animated component in the app checks both, via a CSS media query plus a
+  // `:root[data-reduce-motion='true']` selector; this is the JS-side (GSAP)
+  // equivalent of that same pair.
+  return (
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    document.documentElement.dataset.reduceMotion === 'true'
+  );
 }
 
 export default function DuelArena({ racers, strike }: DuelArenaProps) {
@@ -106,6 +115,14 @@ export default function DuelArena({ racers, strike }: DuelArenaProps) {
               slashEl.classList.remove('duel-arena__slash--active');
               void slashEl.offsetWidth;
               slashEl.classList.add('duel-arena__slash--active');
+            }
+            defBody.classList.remove('swordsman--hit-flash');
+            void defBody.getBoundingClientRect(); // SVGElement has no offsetWidth — this is the reflow-forcing equivalent
+            defBody.classList.add('swordsman--hit-flash');
+            if (scopeRef.current) {
+              scopeRef.current.classList.remove('duel-arena--shake');
+              void scopeRef.current.offsetWidth;
+              scopeRef.current.classList.add('duel-arena--shake');
             }
             gsap
               .timeline()

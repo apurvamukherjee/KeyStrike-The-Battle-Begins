@@ -173,7 +173,10 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       // A clean word is a landed strike — play it instantly on this screen
       // (client-authoritative, zero latency) and let the room know so the
       // opponent's screen can play the same swing. A miss doesn't swing.
-      if (judgement !== 'miss') client.sendWordStruck();
+      if (judgement !== 'miss') {
+        playChime(ctx, fxGain, 'clash');
+        client.sendWordStruck();
+      }
 
       setHud((h) => ({
         ...h,
@@ -228,6 +231,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     /** The opponent's own clean word landing — I already animated my own strike instantly in bumpHud, so only react here when it isn't mine. */
     function handleWordStruck(event: WordStruckEvent) {
       if (event.fromId === client.id) return;
+      playChime(ctx, fxGain, 'clash');
       setHud((h) => ({ ...h, strike: { strikerId: event.fromId, seq: (h.strike?.seq ?? 0) + 1 } }));
     }
 

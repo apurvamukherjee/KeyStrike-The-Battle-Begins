@@ -13,6 +13,32 @@
   filter: drop-shadow(0 0 4px var(--glow, #fff));
 }
 
+/* A landed strike's impact pulse — DuelArena retriggers this by toggling the
+   class on the defender's swordsman each time a hit resolves. Ends back at
+   the base filter above since no animation-fill-mode is set. */
+.swordsman--hit-flash {
+  animation: swordsman-hit-flash 260ms ease-out;
+}
+
+@keyframes swordsman-hit-flash {
+  0% {
+    filter: drop-shadow(0 0 16px rgba(224, 38, 63, 0.9)) brightness(1.6) saturate(1.4);
+  }
+  100% {
+    filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.6));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swordsman--hit-flash {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion='true'] .swordsman--hit-flash {
+  animation: none;
+}
+
 .swordsman__blade-glow {
   filter: drop-shadow(0 0 6px rgba(243, 240, 228, 0.55));
 }

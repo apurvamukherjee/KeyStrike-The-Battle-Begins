@@ -206,6 +206,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
 
       if (result.type === 'wordComplete') {
         playChime(ctx, fxGain, result.judgement);
+        if (result.judgement !== 'miss') playChime(ctx, fxGain, 'clash');
         bumpHud(result.judgement, 'you');
         advanceRace(result.judgement);
       }
@@ -264,11 +265,13 @@ export default function DuelScreen({ songId, difficulty, enemyId, onExit }: Duel
           });
         }
 
-        // Purely visual (swing + HP tick) — no chime, so it never reads as
-        // feedback on the player's OWN typing the way 'perfect'/'good' do.
+        // The CPU's own swing gets the neutral clash sound (an impact
+        // occurred) but never 'perfect'/'good', which would read as feedback
+        // on the player's OWN typing rather than the enemy's.
         const cpuResult = stepCpu(cpuState, activeEnemy.profile, Math.max(0, rawSongTime), runner.totalWords);
         cpuState = cpuResult.state;
         if (cpuResult.judgement && cpuResult.judgement !== 'miss') {
+          playChime(ctx, fxGain, 'clash');
           setHud((h) => ({ ...h, strike: { strikerId: CPU_ID, seq: (h.strike?.seq ?? 0) + 1 } }));
         }
         if (cpuState.progress >= 1) finishDuel(false);
