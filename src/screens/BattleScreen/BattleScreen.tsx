@@ -4,6 +4,7 @@ import type { RoomPlayer, RoomState } from '../../multiplayer/types';
 import type { Racer } from '../../components/RaceTrack/RaceTrack';
 import SentenceBattleStage from './SentenceBattleStage';
 import WordBattleStage from './WordBattleStage';
+import DuelBattleStage from './DuelBattleStage';
 import './BattleScreen.css';
 
 interface BattleScreenProps {
@@ -97,6 +98,8 @@ export default function BattleScreen({ client, initialRoom, onResults, onLeave }
           onEliminated={() => setEliminated(true)}
           onLeave={onLeave}
         />
+      ) : room.mode === 'duel' ? (
+        <DuelBattleStage client={client} room={room} racers={racers} onCarProgress={setCarProgress} onLeave={onLeave} />
       ) : (
         <WordBattleStage
           client={client}

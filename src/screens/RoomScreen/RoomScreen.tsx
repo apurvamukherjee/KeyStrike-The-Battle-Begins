@@ -3,7 +3,7 @@ import { pickSentences } from '../../data/sentences';
 import { songs } from '../../data/songs';
 import { RoomClient } from '../../multiplayer/RoomClient';
 import { clearPendingSession } from '../../multiplayer/session';
-import type { RoomState, Team } from '../../multiplayer/types';
+import type { RaceMode, RoomState, Team } from '../../multiplayer/types';
 import { DIFFICULTIES, type Difficulty } from '../../types/song';
 import Avatar from '../../components/Avatar/Avatar';
 import { getWinStreak } from '../../utils/winStreak';
@@ -11,6 +11,8 @@ import './RoomScreen.css';
 
 const TEAMS: Team[] = ['A', 'B'];
 const SESSION_SENTENCE_COUNT = 4;
+const MODES: RaceMode[] = ['song', 'sentence', 'duel'];
+const MODE_LABEL: Record<RaceMode, string> = { song: 'Song', sentence: 'Sentence', duel: 'Duel' };
 
 interface RoomScreenProps {
   client: RoomClient;
@@ -53,6 +55,8 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
     B: room.players.filter((p) => p.team === 'B').length,
   };
   const teamsReady = !room.teamMode || (teamCounts.A > 0 && teamCounts.B > 0);
+  const connectedCount = room.players.filter((p) => p.connected).length;
+  const duelReady = room.mode !== 'duel' || connectedCount === 2;
 
   return (
     <div className="screen">
@@ -62,7 +66,7 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           {copied ? 'Copied' : 'Copy'}
         </button>
       </h1>
-      <p className="tagline">Share this code — up to 4 players.</p>
+      <p className="tagline">Share this code — {room.mode === 'duel' ? 'exactly 2 players' : 'up to 4 players'}.</p>
 
       <div className="panel room__panel">
         <ul className="room__players">
@@ -85,21 +89,32 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         </ul>
 
         {isHost && (
+          <div className="difficulty-picker room__mode-picker" role="radiogroup" aria-label="Race mode">
+            {MODES.map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={room.mode === m}
+                className={`difficulty-picker__option${room.mode === m ? ' difficulty-picker__option--active' : ''}`}
+                onClick={() => client.selectMode(m)}
+              >
+                {MODE_LABEL[m]}
+              </button>
+            ))}
+          </div>
+        )}
+        {isHost && (
           <div className="room__mode-toggles">
-            <button
-              type="button"
-              className={`room__team-mode-toggle${room.mode === 'sentence' ? ' room__team-mode-toggle--active' : ''}`}
-              onClick={() => client.selectMode(room.mode === 'sentence' ? 'song' : 'sentence')}
-            >
-              Mode: {room.mode === 'sentence' ? 'Sentence' : 'Song'}
-            </button>
-            <button
-              type="button"
-              className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
-              onClick={() => client.toggleTeamMode()}
-            >
-              Team Mode: {room.teamMode ? 'On' : 'Off'}
-            </button>
+            {room.mode !== 'duel' && (
+              <button
+                type="button"
+                className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
+                onClick={() => client.toggleTeamMode()}
+              >
+                Team Mode: {room.teamMode ? 'On' : 'Off'}
+              </button>
+            )}
             {room.mode === 'song' && (
               <button
                 type="button"
@@ -112,7 +127,12 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           </div>
         )}
         {room.mode === 'song' && room.suddenDeath && (
-          <p className="room__sudden-death-hint">One miss and you&rsquo;re out — spectate the rest of the race.</p>
+          <p className="room__hint">One miss and you&rsquo;re out — spectate the rest of the race.</p>
+        )}
+        {room.mode === 'duel' && (
+          <p className="room__hint">
+            {duelReady ? 'Duel Mode — first to fully strike the other down wins.' : 'Duel Mode needs exactly 2 players to start.'}
+          </p>
         )}
 
         {room.teamMode && (
@@ -192,7 +212,7 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
             {room.mode === 'sentence'
               ? `Sentence Mode · ${DIFFICULTY_LABEL[room.difficulty]}`
               : song
-                ? `${song.title} · ${DIFFICULTY_LABEL[room.difficulty]}`
+                ? `${room.mode === 'duel' ? 'Duel · ' : ''}${song.title} · ${DIFFICULTY_LABEL[room.difficulty]}`
                 : 'Waiting for the host to pick a song…'}
           </p>
         )}
@@ -203,7 +223,7 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           <button
             type="button"
             className="cap cap--primary"
-            disabled={(room.mode === 'song' && !room.songId) || !teamsReady}
+            disabled={(room.mode !== 'sentence' && !room.songId) || !teamsReady || !duelReady}
             onClick={() =>
               client.startBattle(
                 room.mode === 'sentence' ? pickSentences(room.difficulty, SESSION_SENTENCE_COUNT).join(' ') : undefined

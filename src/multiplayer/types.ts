@@ -2,7 +2,7 @@ import type { Difficulty } from '../types/song';
 
 export type RoomPhase = 'lobby' | 'countdown' | 'battle' | 'results';
 
-export type RaceMode = 'song' | 'sentence';
+export type RaceMode = 'song' | 'sentence' | 'duel';
 
 export interface PlayerProgress {
   /** 0-1, how far this player's car has traveled toward the finish line */
@@ -31,6 +31,11 @@ export interface PowerUpUsedEvent {
   fromId: string;
   type: PowerUpType;
   targetId: string | null;
+}
+
+/** Duel Mode: relayed each time a player lands a clean word, purely to trigger the opponent's sword-swing animation on everyone's screen — the actual HP/damage numbers still come from the regular progress broadcast. */
+export interface WordStruckEvent {
+  fromId: string;
 }
 
 export interface RoomPlayer {

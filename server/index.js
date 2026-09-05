@@ -136,7 +136,10 @@ io.on('connection', (socket) => {
     const room = rooms.get(String(code || '').toUpperCase());
     if (!room) return ack?.({ ok: false, error: 'Room not found' });
     if (room.phase !== 'lobby') return ack?.({ ok: false, error: 'Battle already in progress' });
-    if (connectedPlayers(room).length >= MAX_PLAYERS) return ack?.({ ok: false, error: 'Room is full' });
+    const cap = room.mode === 'duel' ? 2 : MAX_PLAYERS;
+    if (connectedPlayers(room).length >= cap) {
+      return ack?.({ ok: false, error: room.mode === 'duel' ? 'Duel room is full (2 players)' : 'Room is full' });
+    }
 
     room.players.set(socket.id, newPlayer(socket.id, nickname, room.players.size % 10, clientId || socket.id));
     socket.join(room.code);
@@ -178,10 +181,14 @@ io.on('connection', (socket) => {
   socket.on('select-mode', ({ mode } = {}) => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
-    if (mode !== 'song' && mode !== 'sentence') return;
+    if (mode !== 'song' && mode !== 'sentence' && mode !== 'duel') return;
+    // Duel Mode is 1v1 only — refuse to switch into it with a third/fourth
+    // player already seated, mirroring the join-room cap below.
+    if (mode === 'duel' && connectedPlayers(room).length > 2) return;
     room.mode = mode;
     room.sentenceText = null;
-    if (mode === 'sentence') room.suddenDeath = false;
+    if (mode === 'sentence' || mode === 'duel') room.suddenDeath = false;
+    if (mode === 'duel') room.teamMode = false;
     broadcastRoom(io, room);
   });
 
@@ -202,7 +209,7 @@ io.on('connection', (socket) => {
 
   socket.on('toggle-team-mode', () => {
     const room = rooms.get(currentRoomCode);
-    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.mode === 'duel') return;
     room.teamMode = !room.teamMode;
     broadcastRoom(io, room);
   });
@@ -236,6 +243,7 @@ io.on('connection', (socket) => {
     } else if (!room.songId) {
       return;
     }
+    if (room.mode === 'duel' && connectedPlayers(room).length !== 2) return;
     if (room.teamMode) {
       const players = [...room.players.values()];
       const hasA = players.some((p) => p.team === 'A');
@@ -297,6 +305,18 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'battle' || !player || !room.suddenDeath) return;
     player.eliminated = true;
     broadcastRoom(io, room);
+  });
+
+  // Duel Mode: a clean word landed. Purely cosmetic — it exists so the
+  // opponent's screen can play the sword-swing animation in near-real-time;
+  // the actual HP numbers still come from the regular 'progress' broadcast,
+  // so a dropped/delayed event here never desyncs anything, just a missed
+  // flourish.
+  socket.on('word-struck', () => {
+    const room = rooms.get(currentRoomCode);
+    const player = room?.players.get(socket.id);
+    if (!room || room.phase !== 'battle' || !player) return;
+    io.to(room.code).emit('word-struck', { fromId: socket.id });
   });
 
   // A power-up (Nitro self-boost or a Fog attack on another racer), earned
