@@ -8,12 +8,14 @@ import './DuelSelectScreen.css';
 
 interface DuelSelectScreenProps {
   onFight: (songId: string, difficulty: Difficulty, enemyId: string) => void;
+  /** Routes to the room lobby with Duel mode preselected — the online counterpart to this CPU ladder. */
+  onDuelOnline: () => void;
   onBack: () => void;
 }
 
 const DIFFICULTY_LABEL: Record<Difficulty, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 
-export default function DuelSelectScreen({ onFight, onBack }: DuelSelectScreenProps) {
+export default function DuelSelectScreen({ onFight, onDuelOnline, onBack }: DuelSelectScreenProps) {
   const [index, setIndex] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   // Progress only ever changes by finishing a duel, which unmounts this screen
@@ -97,6 +99,10 @@ export default function DuelSelectScreen({ onFight, onBack }: DuelSelectScreenPr
           Back
         </button>
       </div>
+
+      <button type="button" className="duel-select__online-link" onClick={onDuelOnline}>
+        Duel a friend online →
+      </button>
     </div>
   );
 }

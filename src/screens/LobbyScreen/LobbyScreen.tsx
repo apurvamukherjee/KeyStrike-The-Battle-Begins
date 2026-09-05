@@ -6,11 +6,13 @@ import { sanitizeNickname } from '../../utils/nickname';
 import './LobbyScreen.css';
 
 interface LobbyScreenProps {
+  /** Set when arriving via "Duel a friend online" — a created room auto-selects Duel mode instead of the default racing one. */
+  presetMode?: 'duel';
   onEnterRoom: (client: RoomClient, room: RoomState) => void;
   onBack: () => void;
 }
 
-export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
+export default function LobbyScreen({ presetMode, onEnterRoom, onBack }: LobbyScreenProps) {
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
       client.destroy();
       return;
     }
+    if (presetMode === 'duel') client.selectMode('duel');
     savePendingSession({ clientId, code: ack.room.code, nickname: finalNickname });
     onEnterRoom(client, ack.room);
   }
@@ -57,8 +60,12 @@ export default function LobbyScreen({ onEnterRoom, onBack }: LobbyScreenProps) {
 
   return (
     <div className="screen">
-      <h1 className="wordmark wordmark--small">Battle</h1>
-      <p className="tagline">Up to 4 players. No login — just a name and a room code.</p>
+      <h1 className="wordmark wordmark--small">{presetMode === 'duel' ? 'Duel a Friend' : 'Battle'}</h1>
+      <p className="tagline">
+        {presetMode === 'duel'
+          ? 'Create a room and it starts in Duel mode — no login, just a name and a room code.'
+          : 'Up to 4 players. No login — just a name and a room code.'}
+      </p>
 
       <div className="panel lobby__panel">
         <label className="lobby__field">

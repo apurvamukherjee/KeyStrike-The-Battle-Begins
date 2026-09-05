@@ -31,7 +31,7 @@ type Action =
   | { type: 'GO_SONG_SELECT' }
   | { type: 'GO_SETTINGS' }
   | { type: 'GO_STATS' }
-  | { type: 'GO_LOBBY' }
+  | { type: 'GO_LOBBY'; presetMode?: 'duel' }
   | { type: 'GO_DUEL_SELECT' }
   | {
       type: 'START_DUEL';
@@ -62,7 +62,7 @@ function reducer(state: ScreenState, action: Action): ScreenState {
     case 'GO_STATS':
       return { name: 'stats' };
     case 'GO_LOBBY':
-      return { name: 'lobby' };
+      return { name: 'lobby', presetMode: action.presetMode };
     case 'GO_DUEL_SELECT':
       return { name: 'duelSelect' };
     case 'START_DUEL':
@@ -105,6 +105,7 @@ export default function App() {
   const goSongSelect = useCallback(() => dispatch({ type: 'GO_SONG_SELECT' }), []);
   const goSentence = useCallback(() => dispatch({ type: 'GO_SENTENCE' }), []);
   const goLobby = useCallback(() => dispatch({ type: 'GO_LOBBY' }), []);
+  const goDuelOnline = useCallback(() => dispatch({ type: 'GO_LOBBY', presetMode: 'duel' }), []);
   const goDuelSelect = useCallback(() => dispatch({ type: 'GO_DUEL_SELECT' }), []);
 
   useEffect(() => {
@@ -219,6 +220,7 @@ export default function App() {
       {screen.name === 'duelSelect' && (
         <DuelSelectScreen
           onFight={(songId, difficulty, enemyId) => dispatch({ type: 'START_DUEL', songId, difficulty, enemyId })}
+          onDuelOnline={goDuelOnline}
           onBack={goHome}
         />
       )}
@@ -259,7 +261,11 @@ export default function App() {
       {screen.name === 'stats' && <StatsScreen onBack={goHome} />}
 
       {screen.name === 'lobby' && (
-        <LobbyScreen onEnterRoom={(client, room) => dispatch({ type: 'ENTER_ROOM', client, room })} onBack={goHome} />
+        <LobbyScreen
+          presetMode={screen.presetMode}
+          onEnterRoom={(client, room) => dispatch({ type: 'ENTER_ROOM', client, room })}
+          onBack={goHome}
+        />
       )}
 
       {screen.name === 'room' && (

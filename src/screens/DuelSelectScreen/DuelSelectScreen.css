@@ -17,3 +17,21 @@
 .duel-select__item--locked:hover {
   border-color: var(--line);
 }
+
+.duel-select__online-link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: -0.25rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--ink-dim);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 120ms ease;
+}
+
+.duel-select__online-link:hover {
+  color: var(--red-400);
+}
