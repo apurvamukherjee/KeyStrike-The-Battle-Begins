@@ -23,6 +23,16 @@ export interface PlayerResult {
 
 export type Team = 'A' | 'B';
 
+/** Earned at a combo milestone during a word Battle race — see engine constant COMBO_MILESTONES in WordBattleStage. */
+export type PowerUpType = 'nitro' | 'fog';
+
+/** A one-off relayed event, not part of persisted RoomState — a rejoining player never needs to "catch up" on one. */
+export interface PowerUpUsedEvent {
+  fromId: string;
+  type: PowerUpType;
+  targetId: string | null;
+}
+
 export interface RoomPlayer {
   id: string;
   nickname: string;

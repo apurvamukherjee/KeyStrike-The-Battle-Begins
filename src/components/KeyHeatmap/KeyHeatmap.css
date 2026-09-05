@@ -1,0 +1,31 @@
+.key-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.key-heatmap__row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.key-heatmap__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.key-heatmap__key--hot {
+  border-color: color-mix(in srgb, var(--red-500) calc(var(--heat) * 80%), var(--line-strong));
+  background: color-mix(in srgb, var(--red-500) calc(var(--heat) * 90%), var(--bg-inset));
+  color: var(--ink-bright);
+}

@@ -1,0 +1,27 @@
+.swordsman {
+  width: 148px;
+  height: 210px;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.6));
+  transition: filter 300ms ease-out;
+  /* All motion (idle sway, lunge, recoil, victory, defeat, and the right-hand
+     fighter's mirror) is owned by the animating parent (DuelArena) via GSAP —
+     this component carries no transform/animation of its own, only the
+     drop-shadow feedback transition above. */
+}
+
+.swordsman__eye-glow {
+  filter: drop-shadow(0 0 4px var(--glow, #fff));
+}
+
+.swordsman__blade-glow {
+  filter: drop-shadow(0 0 6px rgba(243, 240, 228, 0.55));
+}
+
+.swordsman__sword-anchor {
+  transform-box: fill-box;
+}
+
+.swordsman__sword-swing {
+  transform-box: fill-box;
+  transform-origin: 0 0;
+}

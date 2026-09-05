@@ -23,6 +23,54 @@
   color: var(--red-400);
 }
 
+.gameplay-hud__value--powerup {
+  font-size: 1rem;
+  color: var(--red-400);
+  letter-spacing: 0.04em;
+}
+
+.battle-powerup-toast {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  transform: translateX(-50%);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ink-bright);
+  background: var(--bg-inset);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.9rem;
+  pointer-events: none;
+  animation: powerup-toast-pop 2.2s ease-out forwards;
+}
+
+@keyframes powerup-toast-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  12%,
+  75% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-powerup-toast {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion='true'] .battle-powerup-toast {
+  animation: none;
+}
+
 .battle-eliminated-banner {
   position: absolute;
   left: 50%;

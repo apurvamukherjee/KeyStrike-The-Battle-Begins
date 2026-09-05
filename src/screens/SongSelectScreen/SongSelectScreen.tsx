@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { songs } from '../../data/songs';
 import { getBestScore } from '../../utils/highScores';
+import { getGhostReplay } from '../../utils/ghostReplays';
 import { DIFFICULTIES, type Difficulty } from '../../types/song';
 import './SongSelectScreen.css';
 
@@ -88,6 +89,7 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
       <ul className="song-list" role="listbox" aria-activedescendant={songs[index]?.id}>
         {songs.map((song, i) => {
           const best = getBestScore(song.id, difficulty);
+          const hasGhost = !!getGhostReplay(song.id, difficulty);
           const selected = i === index;
           return (
             <li
@@ -109,6 +111,11 @@ export default function SongSelectScreen({ onSelect, onPractice, onBack }: SongS
                 {'★'.repeat(song.difficulty)}
                 {'☆'.repeat(5 - song.difficulty)}
               </span>
+              {hasGhost && (
+                <span className="song-list__ghost" title="Ghost replay available — race your best run">
+                  👻
+                </span>
+              )}
               <span className="song-list__best">{best ? `${Math.round(best.accuracy)}% · ${best.grade}` : '—'}</span>
             </li>
           );

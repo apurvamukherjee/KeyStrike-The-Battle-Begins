@@ -7,9 +7,11 @@ interface WordStageProps {
   fractionRemaining: number;
   overtime: boolean;
   upcoming: string[];
+  /** Battle mode's Fog power-up: blurs the upcoming-word queue for a few seconds, leaving the active word untouched so it never soft-locks the target. */
+  fogged?: boolean;
 }
 
-export default function WordStage({ word, typed, fractionRemaining, overtime, upcoming }: WordStageProps) {
+export default function WordStage({ word, typed, fractionRemaining, overtime, upcoming, fogged }: WordStageProps) {
   return (
     <div className={`word-stage${overtime ? ' word-stage--overtime' : ''}`}>
       <div className="word-stage__active" aria-live="off">
@@ -34,7 +36,7 @@ export default function WordStage({ word, typed, fractionRemaining, overtime, up
         />
       </div>
 
-      <div className="word-stage__queue">
+      <div className={`word-stage__queue${fogged ? ' word-stage__queue--fogged' : ''}`}>
         {upcoming.map((w, i) => (
           <span key={i} className="word-stage__queue-word">
             {w}

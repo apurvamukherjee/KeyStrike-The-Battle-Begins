@@ -2,302 +2,92 @@
 
 ### The Battle Begins
 
-A browser typing-rhythm game. By Apurva.
-
 <p align="center">
-  <img src="screenshots/11-battle.png" width="820" alt="KeyStrike 4-player Battle mode — a car race track above the word-typing stage" />
+  <img src="screenshots/11-battle.png" width="820" alt="Four racers neck-and-neck in a KeyStrike Battle, each car pulling ahead on the strength of a clean combo" />
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-18-e0263f?style=flat-square&labelColor=0a0a0c" alt="React 18" />
-  <img src="https://img.shields.io/badge/TypeScript-5-e0263f?style=flat-square&labelColor=0a0a0c" alt="TypeScript 5" />
-  <img src="https://img.shields.io/badge/Vite-5-e0263f?style=flat-square&labelColor=0a0a0c" alt="Vite 5" />
-  <img src="https://img.shields.io/badge/Socket.IO-4-e0263f?style=flat-square&labelColor=0a0a0c" alt="Socket.IO 4" />
-  <img src="https://img.shields.io/badge/PWA-installable-e0263f?style=flat-square&labelColor=0a0a0c" alt="Installable PWA" />
-  <img src="https://img.shields.io/badge/license-MIT-e0263f?style=flat-square&labelColor=0a0a0c" alt="MIT License" />
-</p>
+<p align="center"><em>Your keyboard, turned into the fastest weapon in the room.</em></p>
 
-One word at a time, centered on screen, with a shrinking timer underneath —
-type it before the clock runs out. Finish before the deadline for a
-**Perfect**, just after for a **Good**; run out the clock and it's a **Miss**.
-Every song is synthesized live in the browser via the Web Audio API — no
-external audio files, nothing to license. The same engine also powers
-[Sentence Mode](#sentence-mode) (fog-of-war paragraph typing) and 4-player
-[Battle races](#battle-mode-4-players-no-login).
+Type the word before the clock runs out. That's the whole rule — and underneath
+it is a rhythm game, a four-player race, and a running record of your own best
+self, all sharing one deceptively simple mechanic.
 
-**Play it:** not deployed yet — clone and run it locally for now (see
-[Development](#development) below).
+## Why KeyStrike exists
 
-## Showcase
+Most typing tests measure you against a stopwatch and hand you a WPM number at
+the end. That's it — no stakes, no feel, nothing to chase tomorrow. KeyStrike
+starts from a different question: what if typing well felt the way playing well
+feels in any other game?
 
-<table>
-<tr>
-<td width="50%">
-  <img src="screenshots/01-loader.png" alt="Loader screen with an animated keyboard wave and the By Apurva credit" />
-  <p align="center"><sub><b>Loader</b> — animated keyboard, By Apurva</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/02-home.png" alt="Home screen with Play, Sentences, Battle, Stats, and Settings" />
-  <p align="center"><sub><b>Home</b></sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/03-song-select.png" alt="Song select screen with an Easy/Normal/Hard difficulty picker and a Practice button" />
-  <p align="center"><sub><b>Song Select</b> — 5 songs, 3 difficulties each</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/04-gameplay.png" alt="Gameplay screen — the active word, a Perfect judgement popup, and the live keyboard display" />
-  <p align="center"><sub><b>Gameplay</b> — type the word, beat the clock</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/05-results.png" alt="Results screen showing an S grade with a flawless run" />
-  <p align="center"><sub><b>Results</b> — grade, score, hit breakdown</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/06-settings.png" alt="Settings screen with volume, input offset, game speed, text size, colorblind palette, and reduce motion controls" />
-  <p align="center"><sub><b>Settings</b> — speed, text size, accessibility</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/07-stats.png" alt="Lifetime stats screen — plays, words typed, best combo, total score, longest word cleared" />
-  <p align="center"><sub><b>Stats</b> — lifetime totals</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/08-practice.png" alt="Practice mode with speed and loop controls" />
-  <p align="center"><sub><b>Practice</b> — loop a section, adjust speed</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/10-room.png" alt="Battle room screen with two players, avatars, song and difficulty picker" />
-  <p align="center"><sub><b>Battle Room</b> — up to 4 players, no login</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/12-battle-results.png" alt="Battle results screen with a ranked leaderboard" />
-  <p align="center"><sub><b>Battle Results</b> — first past the post wins</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/13-copy-code.png" alt="Battle room heading with a one-click Copy button next to the room code, showing the Copied confirmation state" />
-  <p align="center"><sub><b>Copy Room Code</b> — one click, "Copied" confirmation</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/14-team-mode-room.png" alt="Battle room with Team Mode on, four players split into Team A and Team B" />
-  <p align="center"><sub><b>Team Mode</b> — pick a side, 2 players per team</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/15-countdown.png" alt="Battle screen showing a large 3-2-1-GO countdown overlay before the race starts" />
-  <p align="center"><sub><b>3…2…1…GO</b> — an on-screen countdown before the race</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/16-team-battle.png" alt="Battle screen in team mode showing two lanes, each with two stacked teammate avatars sharing one car" />
-  <p align="center"><sub><b>Team Race</b> — two lanes, one shared car per team</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/17-team-results.png" alt="Battle results screen in team mode, grouped by team, with Team A marked as the winner" />
-  <p align="center"><sub><b>Team Results</b> — grouped by team, not just by player</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/18-beat-challenge-toggle.png" alt="Song Select screen with a Beat Challenge Off/On toggle below the difficulty picker" />
-  <p align="center"><sub><b>Beat Challenge</b> — an optional on-beat scoring bonus</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/19-beat-sync-gameplay.png" alt="Gameplay screen showing a soft tempo-synced pulse behind the word stage and an On-Beat HUD stat" />
-  <p align="center"><sub><b>Beat Sync</b> — a tempo-synced pulse behind the word stage</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/20-sentence-setup.png" alt="Sentence Mode setup screen with a difficulty picker, Beat Challenge toggle, and an explanation of the fog reveal" />
-  <p align="center"><sub><b>Sentence Mode</b> — pick a difficulty tier and fog width</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/21-sentence-fog-reveal.png" alt="Sentence Mode gameplay — already-typed text lit up, the current letter bright with a caret, and the rest of the paragraph fading into fog" />
-  <p align="center"><sub><b>Fog Reveal</b> — type to light up the sentence ahead of you</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/22-sentence-results.png" alt="Sentence Mode results screen with an S grade, WPM, accuracy, max combo, and score" />
-  <p align="center"><sub><b>Sentence Results</b> — WPM, accuracy, combo, grade</sub></p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="screenshots/23-sudden-death-room.png" alt="Battle room screen with Sudden Death toggled on next to Team Mode, and a hint that one miss eliminates you" />
-  <p align="center"><sub><b>Sudden Death</b> — host toggle, one miss and you're out</sub></p>
-</td>
-<td width="50%">
-  <img src="screenshots/24-sudden-death-eliminated.png" alt="Battle screen showing an Eliminated — spectating banner and a greyed-out crashed car in the race track" />
-  <p align="center"><sub><b>Crashed Out</b> — spectate the rest of the race live</sub></p>
-</td>
-</tr>
-</table>
+So every track has a bassline, a pad, and a beat, all live while you play — get
+in the pocket and the music leans into it, building as your combo grows; miss a
+few and it falls back to quiet. Land enough clean words in a row and you bank a
+strike you can use to burst ahead of a rival or blur their view mid-race. Come
+back the next day and your own best run from last night is waiting on the
+track as a ghost, there to be beaten.
 
-## How to play
+None of it asks for an account. A race with friends is a four-letter code,
+typed in and shared — nobody signs up, nobody installs anything, and the game
+remembers your progress on the device you played it on. It's built to be picked
+up in ten seconds and to still have new ground to cover a hundred races later.
 
-Type each word before its timer runs out. Every correct next letter locks
-in; wrong ones are simply ignored — no penalty, same forgiveness as an
-ordinary typing test.
+## Modules
 
-- **Perfect** — finished at or before the deadline
-- **Good** — finished just after, within a short grace period
-- **Miss** — the grace period ran out unfinished; breaks your combo
-- `Esc` — pause / resume (solo and Practice only — Battle has no pause)
+| Module | What you get | Where |
+|---|---|---|
+| **Solo Play** | Five original tracks, three difficulties each — one word at a time against a shrinking clock | Solo |
+| **Practice** | Loop any stretch of a track and scrub the tempo from a crawl to double speed | Solo |
+| **Sentence Mode** | A full paragraph revealed through fog as you type it — no clock, just clarity | Solo |
+| **Battle** | Race up to three friends on a shared 4-letter code — first car to the line wins | Multiplayer |
+| **Team Battles** | Pair up 2-on-2 behind one shared car; your combined pace is the only thing that matters | Multiplayer |
+| **Sudden Death** | One miss crashes you out of the race for good — survive to keep a shot at winning | Multiplayer |
+| **Power-Ups** | Bank a hot streak into Nitro for a burst of speed, or Fog to blur a rival's view | Multiplayer |
+| **Ghost Rivals** | Your best-ever run comes back as a translucent rival car every time you replay a track | Solo |
+| **Living Music** | The backing track intensifies in real time as your combo climbs, and eases off when it breaks | Everywhere |
+| **Stats & Heatmap** | Lifetime totals, plus a key-by-key map of exactly where you're fast and where you fumble | Solo |
+| **Accessibility Suite** | Game speed, a colorblind-safe palette, reduced motion, and adjustable text size | Everywhere |
 
-Combo builds a score multiplier as you chain hits, and longer words are
-worth more. Five original songs are included (each with its own hand-curated
-word bank), every one playable at **Easy**, **Normal**, or **Hard** — each
-word's time budget scales with its own length, so the pace you need stays
-consistent within a tier instead of being generous for short words and
-brutal for long ones. Best score per song+difficulty and lifetime stats
-(words typed, best combo, longest word ever cleared) are saved locally in
-your browser.
+## Design philosophy
 
-Flip on **Beat Challenge** in Song Select and a keystroke landing right on
-the beat earns a bonus on top of normal scoring — never a penalty, just
-extra score for playing in the pocket. A soft pulse behind the word stage,
-timed to the song's own tempo, makes the beat visible whether or not the
-challenge is on.
+**One word, one beat.** The whole game rests on a single readable unit — a word,
+a deadline, a judgement. Nothing is asked of you that isn't shown on screen.
 
-## Battle mode (4 players, no login)
+**Forgiving by default.** A wrong letter is simply ignored, never punished. The
+only thing that costs you is running out the clock — the same grace an ordinary
+typing test gives you, kept intact even under pressure.
 
-Create a room, get a 4-character code, share it — up to three friends join
-by typing it in. No accounts, nothing to remember. The host picks a song and
-difficulty and starts the race.
+**Music that listens back.** The soundtrack isn't a fixed backing track playing
+underneath you — it responds to how you're doing, live, every run. Two players
+on the same song at the same difficulty can hear two different performances.
 
-Progress is shown as a **car race**: each player's car advances along the
-track as they type, sped up by combo the same way scoring is — a hot streak
-visibly pulls your car ahead. **First car to the finish line wins**, even if
-the song is still playing for everyone else. Ranked results show everyone's
-score and accuracy once the race ends.
+**Competitive without a scoreboard to guard.** Racing a friend or racing your
+own ghost both work the same way: the pressure is real, but nobody's climbing a
+global leaderboard or getting matched against strangers. The stakes are always
+local and personal.
 
-The interesting design constraint: syncing every keystroke over the network
-would be both slow and unfair, so **each client stays authoritative for its
-own run** — the same local engine as solo play, same local judging. The
-server ([`server/`](server/)) only relays room membership, a synchronized
-start signal, and a periodic progress snapshot from each player so everyone
-sees everyone else live. See [`server/README.md`](server/README.md) for
-running or deploying it.
+**Everyone's invited.** Game speed, a colorblind-safe palette, and a reduced
+motion mode aren't buried in an options menu as an afterthought — they sit right
+next to difficulty as first-class ways to play.
 
-### What's new
+**No accounts, no friction.** Nothing you do requires a login. Progress lives on
+your device; a multiplayer race lives for as long as the room does. Closing the
+tab costs you nothing you can't get back by opening it again.
 
-- **2v2 team mode** — toggle Team Mode in the room and pick a side (2
-  players per team). Each teammate keeps typing their own words with the
-  same local scoring as always, but their progress bars now share one car —
-  the server sums both members' progress and calls the win itself once a
-  team's combined total crosses the finish line, since no single client can
-  see the pair's combined total. Results are grouped by team instead of one
-  flat leaderboard.
-- **3…2…1…GO countdown** — the gap between the room and the first word used
-  to be a silent pause; it now counts down on screen before the race starts.
-- **Copy room code** — a one-click copy button next to the room heading,
-  with a "Copied" confirmation, for sharing the code without a screenshot.
-- **Rejoin after refresh** — a refresh or accidental tab close mid-lobby or
-  mid-battle used to lose your seat for good. Each tab now keeps a small
-  session token and reclaims its spot on reconnect — including picking a
-  race back up mid-battle — instead of starting over.
-- **Nickname sanitization** — nicknames are trimmed, collapsed, and
-  filtered to a safe character set, live as you type and authoritatively on
-  the server (which broadcasts them to everyone else in the room).
-- **Sudden Death** — a host-toggleable room setting where one miss crashes
-  your car out of the race for good. You keep spectating (your song keeps
-  playing so the race doesn't wait on you), but only a racer still in it can
-  win. Composes with Team Mode too — an eliminated player's team just has to
-  lean harder on their surviving teammate.
-- **Combo milestones in Battle** — the same combo-milestone pop-up solo play
-  already had now shows up mid-race too.
-- **Win streaks** — a local, per-nickname streak badge (this device only, no
-  accounts) tracks consecutive race wins and shows up in the room and on the
-  results screen.
+## Platform
 
-## Sentence Mode
+KeyStrike runs entirely in the browser, on desktop or mobile.
 
-A full sentence, not a single word — but you can't read ahead. Already-typed
-text stays lit, the letter under the caret is bright, and everything past it
-fades into fog within a difficulty-tuned window: a wide, forgiving reveal on
-Easy, barely more than the next word on Hard. The caret glides smoothly
-between letters instead of snapping, and an ambient backing track — with the
-same tempo-synced pulse as Beat Challenge — plays underneath. There's no
-per-word deadline; the fog itself is the challenge, which also makes this
-the mode to reach for when you just want to practice without being graded
-on the clock.
+- **Keyboard-first, touch-friendly.** The core experience is built around a
+  physical keyboard; on a touch device, a tap opens your on-screen keyboard so
+  the same game works on the go.
+- **Install it like an app.** Add it to your home screen or desktop dock and
+  it keeps working offline — no store, no update prompts.
+- **Multiplayer without infrastructure.** A battle room is a shared four-letter
+  code. Close your laptop mid-race and reopen it — your seat, your progress,
+  and your score are all still there waiting.
+- **Fullscreen everywhere.** A single toggle, present on every screen, for
+  sessions with nothing else on the display.
 
-Each run strings four sentences from the chosen tier together and tracks
-live WPM, accuracy, and combo, ending on a results screen with a letter
-grade. Beat Challenge works here too, for the same on-beat scoring bonus as
-word mode.
+---
 
-## Everything else
-
-- **Practice mode** — loop any section of a song (`[` / `]` to mark it,
-  `R` to clear), scrub speed 25%–200% with `←` `→`. No score kept; it's for
-  learning a hard passage, not grading it.
-- **Accessibility** — Settings has a Game Speed slider (more time per word),
-  a text-size slider, a colorblind-safe amber palette (swaps out red, which
-  is otherwise the app's only accent), and an in-app Reduce Motion toggle
-  that supplements the OS-level setting.
-- **Mobile** — typing needs a keyboard, so on a touch device a "Tap to
-  Start" screen opens your device's on-screen keyboard via a focused hidden
-  input, rather than blocking play outright.
-- **Installable PWA** — offline-capable; add it to your home screen or
-  desktop dock.
-- **Fullscreen toggle** — top-right corner, on every screen.
-
-## Development
-
-Requires Node 18+.
-
-```bash
-npm install
-npm run dev       # start the dev server
-npm run build     # type-check and build a production bundle to dist/
-npm run preview   # serve the production build locally
-npm run test      # run the unit tests
-npm run lint      # lint the project
-```
-
-Battle mode needs its relay server running too — see
-[`server/README.md`](server/README.md) (`cd server && npm install && npm start`,
-then the frontend's `VITE_BATTLE_SERVER_URL` points at it, defaulting to
-`http://localhost:8787` in dev).
-
-## How the music works
-
-Each song in `src/data/songs/` is an original word bank plus a chord
-progression (see `src/engine/songBuilder.ts`), which `buildWordSong`
-expands into three difficulty charts (word choice and spacing vary by
-difficulty) and a synthesized backing track — bass, a soft pad, and hats,
-played through oscillators and noise bursts in `src/engine/audioEngine.ts`.
-Word-completion sounds are short reactive chimes played live rather than
-pre-scheduled, since the three difficulties don't share one timeline to bake
-sounds into ahead of time.
-
-## Project structure
-
-```
-src/
-├── components/     shared UI (AnimatedKeyboard, Avatar, RaceTrack, Slider, FullscreenButton)
-├── screens/        one folder per screen — solo, practice, sentence, and battle all live here
-├── engine/         word/sentence judging, beat-grid helpers, audio synthesis, song building/scaling
-├── multiplayer/    RoomClient (socket.io-client wrapper) and shared room types
-├── data/           the five song definitions and the Sentence Mode sentence bank
-├── utils/          localStorage-backed settings, high scores, lifetime stats, win streaks
-├── types/          shared TypeScript types
-└── styles/         theme tokens and global styles
-
-server/             the battle relay — see server/README.md
-```
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+Created by Apurva · MIT Licensed — see [LICENSE](LICENSE).

@@ -11,11 +11,15 @@ export interface SynthNote {
   velocity?: number;
 }
 
+/** A reactive backing-track layer, faded in live as the player's combo multiplier climbs (see engine/musicIntensity.ts). */
+export type TrackRole = 'intensityPad' | 'intensityHats';
+
 export interface SynthTrack {
   wave: Waveform;
   notes: SynthNote[];
-  /** 0-1 track gain, defaults to 0.2 */
+  /** 0-1 track gain, defaults to 0.2. For a track with `role` set, this is the gain it ramps up to at full intensity — it starts silent. */
   gain?: number;
+  role?: TrackRole;
 }
 
 export interface WordNote {

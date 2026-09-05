@@ -106,6 +106,12 @@
   letter-spacing: 0.05em;
   color: var(--ink-faint);
   min-height: 1.5em;
+  filter: blur(0);
+  transition: filter 200ms ease;
+}
+
+.word-stage__queue--fogged {
+  filter: blur(6px);
 }
 
 @media (prefers-reduced-motion: reduce) {

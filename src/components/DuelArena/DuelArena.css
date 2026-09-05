@@ -1,0 +1,304 @@
+/*
+ * A dedicated night-dojo palette for Duel Mode — decorative and local to this
+ * component, the same way RaceTrack.css's CAR_COLORS aren't derived from the
+ * shared theme tokens. Blade-flash/blood accents below still route through
+ * the real --red-* tokens, so colorblind mode continues to affect them.
+ */
+.duel-arena {
+  --dj-night-deep: #050508;
+  --dj-night: #0d0c15;
+  --dj-night-raised: #14121e;
+  --dj-indigo: #221d3d;
+  --dj-steel: #f3f0e4;
+  --dj-gold: #cf9f4f;
+  --dj-gold-dim: #8a713f;
+
+  position: relative;
+  width: min(100%, 640px);
+  height: min(46vh, 360px);
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse 60% 45% at 78% 12%, rgba(207, 159, 79, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--dj-indigo) 0%, var(--dj-night) 46%, var(--dj-night-deep) 100%);
+}
+
+.duel-arena__moon {
+  position: absolute;
+  top: 8%;
+  right: 10%;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fbf6e4, var(--dj-gold) 70%, rgba(207, 159, 79, 0.15) 100%);
+  box-shadow: 0 0 60px 14px rgba(207, 159, 79, 0.25);
+}
+
+.duel-arena__kanji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(24vw, 200px);
+  font-weight: 800;
+  color: rgba(243, 240, 228, 0.035);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.duel-arena__torii {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(60%, 340px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.duel-arena__mist {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 12%;
+  height: 90px;
+  background: linear-gradient(180deg, transparent, rgba(243, 240, 228, 0.05) 50%, transparent);
+  filter: blur(6px);
+  animation: duel-mist-drift 26s linear infinite;
+}
+
+.duel-arena__mist--low {
+  bottom: 4%;
+  height: 50px;
+  animation-duration: 34s;
+  animation-direction: reverse;
+  opacity: 0.7;
+}
+
+@keyframes duel-mist-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(20%);
+  }
+}
+
+.duel-arena__ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+  border-top: 1px solid rgba(243, 240, 228, 0.06);
+}
+
+.duel-arena__petals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.duel-arena__petal {
+  position: absolute;
+  top: -5%;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #ffb6c8, var(--red-400));
+  border-radius: 2px 6px 2px 6px;
+  animation: duel-petal-fall linear infinite;
+}
+
+@keyframes duel-petal-fall {
+  from {
+    transform: translate3d(0, -10%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(var(--drift, 40px), 480%, 0) rotate(340deg);
+  }
+}
+
+.duel-arena__vs {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--dj-gold);
+  text-shadow: 0 0 20px rgba(207, 159, 79, 0.5);
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+}
+
+.duel-arena__duel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 6% 6%;
+}
+
+.duel-arena__fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 140px;
+}
+
+.duel-arena__plate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--dj-night-raised), var(--dj-night));
+  border: 1px solid var(--dj-gold-dim);
+  margin-bottom: 0.6rem;
+}
+
+.duel-arena__fighter--right .duel-arena__plate {
+  flex-direction: row-reverse;
+}
+
+.duel-arena__plate-name {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--dj-steel);
+  white-space: nowrap;
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duel-arena__plate-hp {
+  display: block;
+  width: 76px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  border: 1px solid rgba(243, 240, 228, 0.12);
+}
+
+.duel-arena__plate-hp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--red-500), var(--red-400));
+  transition: width 480ms cubic-bezier(0.22, 0.68, 0, 1.4);
+}
+
+.duel-arena__fighter--victor {
+  filter: drop-shadow(0 0 18px rgba(207, 159, 79, 0.55));
+}
+
+.duel-arena__fighter--defeated .swordsman {
+  filter: grayscale(0.7) brightness(0.6);
+}
+
+.duel-arena__slash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.duel-arena__slash--active {
+  animation: duel-slash-flash 420ms ease-out;
+}
+
+.duel-arena__slash::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: -10%;
+  width: 120%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--dj-steel) 20%, var(--red-400) 55%, transparent);
+  transform: rotate(-8deg) scaleX(0);
+  transform-origin: left center;
+  box-shadow: 0 0 18px 3px var(--red-glow);
+}
+
+.duel-arena__slash--right::before {
+  transform: rotate(188deg) scaleX(0);
+  transform-origin: right center;
+}
+
+.duel-arena__slash--active::before {
+  animation: duel-streak-cross 340ms ease-out forwards;
+}
+
+.duel-arena__slash--right.duel-arena__slash--active::before {
+  animation-name: duel-streak-cross-right;
+}
+
+@keyframes duel-streak-cross {
+  0% {
+    transform: rotate(-8deg) scaleX(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  70% {
+    transform: rotate(-8deg) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-8deg) scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes duel-streak-cross-right {
+  0% {
+    transform: rotate(188deg) scaleX(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  70% {
+    transform: rotate(188deg) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(188deg) scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes duel-slash-flash {
+  0% {
+    opacity: 0;
+    background: transparent;
+  }
+  12% {
+    opacity: 1;
+    background: var(--red-wash);
+  }
+  100% {
+    opacity: 0;
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duel-arena__mist,
+  .duel-arena__petal {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion='true'] .duel-arena__mist,
+:root[data-reduce-motion='true'] .duel-arena__petal {
+  animation: none !important;
+}

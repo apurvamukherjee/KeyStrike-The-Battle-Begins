@@ -88,6 +88,10 @@ export function buildWordSong(src: WordSongSource): SongDefinition {
   // "melody" interactively now, so there's no lead line to keep in sync per chart.
   const bassNotes: SynthNote[] = [];
   const padNotes: SynthNote[] = [];
+  // A high harmony shadowing the pad, an octave up — silent until a hot combo
+  // ramps it in live (see engine/musicIntensity.ts), for a real-time "the music
+  // is rewarding you" lift that a decoded-audio game couldn't do without stems.
+  const intensityPadNotes: SynthNote[] = [];
   for (let bar = 0; bar < src.bars; bar++) {
     const degree = src.bassDegrees[bar % src.bassDegrees.length];
     const barStartBeat = bar * beatsPerBar;
@@ -107,9 +111,19 @@ export function buildWordSong(src: WordSongSource): SongDefinition {
       duration: secPerBeat * beatsPerBar * 0.95,
       velocity: 0.35,
     });
+
+    const intensityPadFreq = degreeToFreq(src.rootFreq * 2, degree, scale);
+    intensityPadNotes.push({
+      time: toSec(barStartBeat),
+      freq: intensityPadFreq,
+      duration: secPerBeat * beatsPerBar * 0.95,
+      velocity: 0.3,
+    });
   }
 
   const hatNotes: SynthNote[] = [];
+  // A denser 16th-note layer over the same grid, faded in alongside intensityPadNotes.
+  const intensityHatNotes: SynthNote[] = [];
   if (src.hats !== false) {
     const totalBeats = src.bars * beatsPerBar;
     const steps = totalBeats * 2; // 8th notes
@@ -122,13 +136,25 @@ export function buildWordSong(src: WordSongSource): SongDefinition {
         velocity: isOffbeat ? 0.32 : 0.18,
       });
     }
+
+    const intensitySteps = totalBeats * 4; // 16th notes
+    for (let quarter = 0; quarter < intensitySteps; quarter++) {
+      intensityHatNotes.push({
+        time: toSec(quarter / 4),
+        freq: 0,
+        duration: 0.03,
+        velocity: quarter % 2 === 0 ? 0.3 : 0.2,
+      });
+    }
   }
 
   const tracks: SynthTrack[] = [
     { wave: 'triangle', notes: bassNotes, gain: 0.26 },
     { wave: 'sine', notes: padNotes, gain: 0.14 },
+    { wave: 'sine', notes: intensityPadNotes, gain: 0.16, role: 'intensityPad' },
   ];
   if (hatNotes.length) tracks.push({ wave: 'noise', notes: hatNotes, gain: 0.16 });
+  if (intensityHatNotes.length) tracks.push({ wave: 'noise', notes: intensityHatNotes, gain: 0.14, role: 'intensityHats' });
 
   const lastWordTime = Math.max(
     0,

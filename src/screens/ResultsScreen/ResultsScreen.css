@@ -15,6 +15,18 @@
   text-shadow: 0 0 12px var(--red-glow);
 }
 
+.results__ghost {
+  margin: -1rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+}
+
+.results__ghost--won {
+  color: var(--red-400);
+  font-weight: 700;
+}
+
 .results__panel {
   width: min(26rem, 100%);
   text-align: center;

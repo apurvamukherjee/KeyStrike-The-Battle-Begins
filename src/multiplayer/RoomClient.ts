@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import type { Difficulty } from '../types/song';
-import type { JoinAck, PlayerProgress, PlayerResult, RaceMode, RoomState, Team } from './types';
+import type { JoinAck, PlayerProgress, PlayerResult, PowerUpType, PowerUpUsedEvent, RaceMode, RoomState, Team } from './types';
 
 const SERVER_URL = (import.meta.env.VITE_BATTLE_SERVER_URL as string | undefined) || 'http://localhost:8787';
 
@@ -8,16 +8,23 @@ const SERVER_URL = (import.meta.env.VITE_BATTLE_SERVER_URL as string | undefined
 export class RoomClient {
   private socket: Socket;
   private onRoomUpdate: (room: RoomState) => void;
+  private onPowerUpUsed: ((event: PowerUpUsedEvent) => void) | null = null;
 
   constructor(onRoomUpdate: (room: RoomState) => void) {
     this.onRoomUpdate = onRoomUpdate;
     this.socket = io(SERVER_URL, { transports: ['websocket'] });
     this.socket.on('room-update', (room: RoomState) => this.onRoomUpdate(room));
+    this.socket.on('power-up-used', (event: PowerUpUsedEvent) => this.onPowerUpUsed?.(event));
   }
 
   /** Screens hand the client off to one another as the player moves lobby -> room -> battle. */
   setOnRoomUpdate(handler: (room: RoomState) => void) {
     this.onRoomUpdate = handler;
+  }
+
+  /** A word Battle stage sets this while mounted, to react to a power-up used anywhere in the room (including its own). */
+  setOnPowerUpUsed(handler: ((event: PowerUpUsedEvent) => void) | null) {
+    this.onPowerUpUsed = handler;
   }
 
   get id(): string {
@@ -82,6 +89,11 @@ export class RoomClient {
 
   sendEliminated() {
     this.socket.emit('eliminated');
+  }
+
+  /** `targetId` is null for a self-buff (Nitro), or the racer being hit for an attack (Fog). */
+  usePowerUp(type: PowerUpType, targetId: string | null) {
+    this.socket.emit('use-power-up', { type, targetId });
   }
 
   leaveRoom() {

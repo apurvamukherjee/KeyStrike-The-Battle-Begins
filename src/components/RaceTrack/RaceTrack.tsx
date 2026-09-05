@@ -19,6 +19,8 @@ export interface Racer {
   eliminated?: boolean;
   /** Present for a team-mode lane: renders stacked avatars for both teammates instead of one. */
   members?: RacerMember[];
+  /** Solo ghost racing: a translucent recorded-run lane rather than a live player. */
+  ghost?: boolean;
 }
 
 interface RaceTrackProps {
@@ -44,7 +46,7 @@ export default function RaceTrack({ racers }: RaceTrackProps) {
       {racers.map((r, i) => (
         <div
           key={r.id}
-          className={`race-track__lane${r.isYou ? ' race-track__lane--you' : ''}${!r.connected ? ' race-track__lane--disconnected' : ''}${r.eliminated ? ' race-track__lane--eliminated' : ''}`}
+          className={`race-track__lane${r.isYou ? ' race-track__lane--you' : ''}${!r.connected ? ' race-track__lane--disconnected' : ''}${r.eliminated ? ' race-track__lane--eliminated' : ''}${r.ghost ? ' race-track__lane--ghost' : ''}`}
         >
           <span className="race-track__label">
             {r.members ? (

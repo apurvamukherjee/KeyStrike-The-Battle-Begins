@@ -55,3 +55,10 @@
 .stats__count--miss {
   color: var(--ink-faint);
 }
+
+.stats__heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}

@@ -20,6 +20,7 @@ import { RoomClient } from './multiplayer/RoomClient';
 import { clearPendingSession, loadPendingSession } from './multiplayer/session';
 import type { RoomState } from './multiplayer/types';
 import { applyAppearanceSettings } from './utils/settings';
+import { getGhostReplay } from './utils/ghostReplays';
 
 type Action =
   | { type: 'LOADED' }
@@ -232,6 +233,7 @@ export default function App() {
           songId={screen.songId}
           difficulty={screen.difficulty}
           beatChallenge={screen.beatChallenge}
+          ghostReplay={getGhostReplay(screen.songId, screen.difficulty)}
           onFinish={(result) => dispatch({ type: 'FINISH_SONG', result })}
           onQuit={goSongSelect}
         />

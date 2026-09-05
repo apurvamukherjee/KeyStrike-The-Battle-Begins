@@ -20,6 +20,24 @@ export interface RunResult {
   counts: JudgementCounts;
   grade: string;
   isNewBest: boolean;
+  /** Present only when this run raced a saved ghost — whether the live run out-scored it. */
+  raceGhost?: { won: boolean };
+}
+
+export interface GhostFrame {
+  /** rawSongTime / durationSec when this word was judged — invariant to Game Speed, since duration scales the same way. */
+  songFraction: number;
+  /** Cumulative race-car progress (0-1) immediately after this word. */
+  carProgress: number;
+}
+
+/** A recording of a solo run's race-car progress over time, raced against on a later attempt at the same song+difficulty. */
+export interface GhostReplay {
+  songId: string;
+  difficulty: Difficulty;
+  frames: GhostFrame[];
+  score: number;
+  recordedAt: number;
 }
 
 export interface SentenceRunResult {

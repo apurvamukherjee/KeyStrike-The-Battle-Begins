@@ -28,6 +28,11 @@ export default function ResultsScreen({ result, onRetry, onSongSelect, onHome }:
       <h1 className="wordmark wordmark--small">{song?.title ?? 'Results'}</h1>
       <p className="results__difficulty">{result.difficulty}</p>
       {result.isNewBest && <p className="results__best">New Best!</p>}
+      {result.raceGhost && (
+        <p className={`results__ghost${result.raceGhost.won ? ' results__ghost--won' : ''}`}>
+          {result.raceGhost.won ? 'Beat your ghost!' : 'Your ghost finished ahead — go again'}
+        </p>
+      )}
 
       <div className="panel results__panel">
         <div className="results__grade">{result.grade}</div>

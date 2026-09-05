@@ -299,6 +299,19 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
+  // A power-up (Nitro self-boost or a Fog attack on another racer), earned
+  // client-side at a combo milestone. Like 'progress'/'eliminated', the charge
+  // itself is trusted rather than server-tracked — this is purely a one-off
+  // relay to the room, not persisted into room state or replayed on rejoin.
+  socket.on('use-power-up', ({ type, targetId } = {}) => {
+    const room = rooms.get(currentRoomCode);
+    const player = room?.players.get(socket.id);
+    if (!room || room.phase !== 'battle' || !player) return;
+    if (type !== 'nitro' && type !== 'fog') return;
+    if (targetId != null && !room.players.has(targetId)) return;
+    io.to(room.code).emit('power-up-used', { fromId: socket.id, type, targetId: targetId ?? null });
+  });
+
   // A player reaching the finish line (carProgress >= 1) OR their song ending
   // sends this. The FIRST non-eliminated one in wins the race outright for
   // the whole room — "first past the post," not "wait for everyone." An

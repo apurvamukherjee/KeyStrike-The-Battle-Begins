@@ -46,6 +46,16 @@
   filter: grayscale(1);
 }
 
+.race-track__lane--ghost .race-track__label {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.race-track__lane--ghost .race-track__car-icon {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+}
+
 .race-track__road {
   position: relative;
   height: 2.25rem;

@@ -3,14 +3,18 @@ import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
 import { beatAnimationDelay, distanceToBeat } from '../../engine/beatClock';
 import { WordRunner, gradeForAccuracy } from '../../engine/chartEngine';
+import { applyIntensity } from '../../engine/musicIntensity';
+import { advanceCarProgress } from '../../engine/raceProgress';
 import { scaleSongTiming } from '../../engine/songBuilder';
-import type { Judgement, RunResult } from '../../types/game';
+import type { GhostFrame, GhostReplay, Judgement, RunResult } from '../../types/game';
 import type { Difficulty } from '../../types/song';
 import { recordScoreIfBest } from '../../utils/highScores';
-import { recordRun } from '../../utils/stats';
+import { saveGhostReplay } from '../../utils/ghostReplays';
+import { recordRun, recordKeyStats, type KeyStat } from '../../utils/stats';
 import { formatScore } from '../../utils/format';
 import { getGameSpeed, getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
+import RaceTrack from '../../components/RaceTrack/RaceTrack';
 import WordStage from './WordStage';
 import './GameplayScreen.css';
 
@@ -27,8 +31,15 @@ interface GameplayScreenProps {
   songId: string;
   difficulty: Difficulty;
   beatChallenge: boolean;
+  /** Your best-ever run for this song+difficulty, if any — raced live as a translucent second car. */
+  ghostReplay?: GhostReplay;
   onFinish: (result: RunResult) => void;
   onQuit: () => void;
+}
+
+interface RaceState {
+  you: number;
+  ghost: number;
 }
 
 interface HudState {
@@ -64,13 +75,21 @@ const INITIAL_HUD: HudState = {
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
-export default function GameplayScreen({ songId, difficulty, beatChallenge, onFinish, onQuit }: GameplayScreenProps) {
+export default function GameplayScreen({
+  songId,
+  difficulty,
+  beatChallenge,
+  ghostReplay,
+  onFinish,
+  onQuit,
+}: GameplayScreenProps) {
   const actionsRef = useRef({ togglePause: () => {}, quit: () => {} });
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [paused, setPausedState] = useState(false);
   const [progress, setProgressState] = useState(0);
+  const [race, setRace] = useState<RaceState | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [mobileStarted, setMobileStarted] = useState(!IS_TOUCH);
   const [beatPulseStyle, setBeatPulseStyle] = useState<CSSProperties>({});
@@ -104,7 +123,7 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
     const offsetSec = getInputOffsetMs() / 1000;
     const startAt = ctx.currentTime + COUNTDOWN_SEC;
     const durationSec = song.durationSec;
-    scheduleSong(ctx, song, startAt, masterGain);
+    const reactiveLayers = scheduleSong(ctx, song, startAt, masterGain);
 
     setBeatPulseStyle({
       animationDuration: `${60 / effectiveBpm}s`,
@@ -116,6 +135,12 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
     let raf = 0;
     let comboMilestonesHit = 0;
     let mobileKeyFlashTimer = 0;
+    let carProgress = 0;
+    let ghostFrameIndex = 0;
+    const ghostFrames: GhostFrame[] = [];
+    const hasGhost = !!ghostReplay;
+    let lastAcceptedTime: number | null = null;
+    const keyStats: Record<string, KeyStat> = {};
 
     function teardown() {
       cancelAnimationFrame(raf);
@@ -136,11 +161,22 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
       const accuracy = runner.accuracy;
       const grade = gradeForAccuracy(accuracy);
       const isNewBest = recordScoreIfBest(songId, difficulty, { score: runner.score, accuracy, grade });
+      if (isNewBest) {
+        saveGhostReplay(songId, difficulty, {
+          songId,
+          difficulty,
+          frames: ghostFrames,
+          score: runner.score,
+          recordedAt: Date.now(),
+        });
+      }
+      const raceGhost = ghostReplay ? { won: runner.score > ghostReplay.score } : undefined;
 
       const longestCleared = runner.words
         .filter((w) => w.judgement === 'perfect' || w.judgement === 'good')
         .reduce((longest, w) => (w.note.word.length > longest.length ? w.note.word : longest), '');
       recordRun({ maxCombo: runner.maxCombo, score: runner.score, counts: runner.counts }, longestCleared);
+      recordKeyStats(keyStats);
 
       onFinish({
         songId,
@@ -152,6 +188,7 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
         counts: runner.counts,
         grade,
         isNewBest,
+        raceGhost,
       });
     }
 
@@ -178,6 +215,8 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
       const hitNewMilestone = judgement !== 'miss' && milestoneIndex !== -1 && milestoneIndex >= comboMilestonesHit;
       if (hitNewMilestone) comboMilestonesHit = milestoneIndex + 1;
 
+      applyIntensity(ctx, reactiveLayers, runner.multiplier());
+
       setHud((h) => ({
         score: runner.score,
         combo: runner.combo,
@@ -195,11 +234,40 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
       setHud((h) => ({ ...h, score: runner.score, onBeatHits: h.onBeatHits + 1 }));
     }
 
+    /** Advances this run's own race-car progress and, since every run might become the next ghost, always records the frame. */
+    function advanceRace(judgement: Judgement, rawSongTime: number) {
+      carProgress = advanceCarProgress(carProgress, runner.totalWords, judgement, runner.multiplier());
+      ghostFrames.push({ songFraction: Math.min(1, rawSongTime / durationSec), carProgress });
+    }
+
+    /** Feeds the Stats screen's typing heatmap — tracks every keypress against whether it was expected at that position, and how long correct ones took since the last accepted keystroke. */
+    function recordKeyPress(letter: string, correct: boolean, judgeTime: number) {
+      const entry =
+        keyStats[letter] ?? (keyStats[letter] = { presses: 0, mistakes: 0, correctLatencyMs: 0, correctCount: 0 });
+      entry.presses++;
+      if (!correct) {
+        entry.mistakes++;
+        return;
+      }
+      if (lastAcceptedTime !== null) {
+        entry.correctLatencyMs += Math.max(0, (judgeTime - lastAcceptedTime) * 1000);
+        entry.correctCount++;
+      }
+      lastAcceptedTime = judgeTime;
+    }
+
     function processLetter(letter: string) {
       const rawSongTime = ctx.currentTime - startAt;
       const judgeTime = rawSongTime - offsetSec;
+      const active = runner.activeWord;
+      const expected = active ? active.note.word[active.typed] : undefined;
+
       const result = runner.handleKey(letter, judgeTime);
-      if (result.type === 'ignored') return;
+      if (result.type === 'ignored') {
+        if (expected) recordKeyPress(letter, false, judgeTime);
+        return;
+      }
+      recordKeyPress(letter, true, judgeTime);
 
       playChime(ctx, fxGain, 'key');
 
@@ -212,6 +280,7 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
       if (result.type === 'wordComplete') {
         playChime(ctx, fxGain, result.judgement);
         bumpHud(result.judgement);
+        advanceRace(result.judgement, rawSongTime);
       }
     }
 
@@ -269,6 +338,7 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
         if (runner.sweepMisses(judgeTime)) {
           playChime(ctx, fxGain, 'miss');
           bumpHud('miss');
+          advanceRace('miss', rawSongTime);
         }
 
         const active = runner.activeWord;
@@ -290,6 +360,16 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
         }
 
         setProgressState(Math.min(1, Math.max(0, rawSongTime / durationSec)));
+
+        if (hasGhost) {
+          const songFraction = Math.min(1, rawSongTime / durationSec);
+          const frames = ghostReplay!.frames;
+          while (ghostFrameIndex < frames.length && frames[ghostFrameIndex].songFraction <= songFraction) {
+            ghostFrameIndex++;
+          }
+          const ghostProgress = ghostFrameIndex > 0 ? frames[ghostFrameIndex - 1].carProgress : 0;
+          setRace({ you: carProgress, ghost: ghostProgress });
+        }
 
         if (runner.isComplete || rawSongTime >= durationSec) {
           finish();
@@ -377,6 +457,26 @@ export default function GameplayScreen({ songId, difficulty, beatChallenge, onFi
           </div>
         )}
       </div>
+
+      {race && (
+        <div className="gameplay-race">
+          <RaceTrack
+            racers={[
+              { id: 'you', nickname: 'You', avatarIndex: 0, carProgress: race.you, isYou: true, finished: false, connected: true },
+              {
+                id: 'ghost',
+                nickname: 'Ghost',
+                avatarIndex: 6,
+                carProgress: race.ghost,
+                isYou: false,
+                finished: false,
+                connected: true,
+                ghost: true,
+              },
+            ]}
+          />
+        </div>
+      )}
 
       <div className="gameplay-progress">
         <div className="gameplay-progress__fill" style={{ width: `${progress * 100}%` }} />

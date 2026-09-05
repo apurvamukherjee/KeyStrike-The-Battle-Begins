@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSongById } from '../../data/songs';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
 import { WordRunner, gradeForAccuracy } from '../../engine/chartEngine';
+import { applyIntensity } from '../../engine/musicIntensity';
+import { advanceCarProgress } from '../../engine/raceProgress';
 import { RoomClient } from '../../multiplayer/RoomClient';
 import { clearPendingSession } from '../../multiplayer/session';
-import type { PlayerResult, RoomState } from '../../multiplayer/types';
+import type { PlayerResult, PowerUpType, PowerUpUsedEvent, RoomState } from '../../multiplayer/types';
 import type { Judgement } from '../../types/game';
 import { formatScore } from '../../utils/format';
 import { getInputOffsetMs, getVolume } from '../../utils/settings';
@@ -15,8 +17,27 @@ import WordStage from '../GameplayScreen/WordStage';
 const LETTER_RE = /^[a-zA-Z]$/;
 const QUEUE_PREVIEW = 3;
 const PROGRESS_SEND_INTERVAL = 0.25;
-const MISS_ADVANCE_FRACTION = 0.15;
 const COMBO_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500];
+/** Instant flat car-progress bump from a Nitro power-up — a fixed fraction of the track, not judgement-scaled like advanceCarProgress. */
+const NITRO_BOOST = 0.06;
+const FOG_DURATION_MS = 4000;
+
+type PowerUpToast = {
+  type: PowerUpType;
+  fromNickname: string;
+  targetNickname: string | null;
+  isSelf: boolean;
+  targetedMe: boolean;
+};
+
+function powerUpToastText(toast: PowerUpToast): string {
+  if (toast.type === 'nitro') {
+    return toast.isSelf ? '🔥 You used Nitro!' : `🔥 ${toast.fromNickname} used Nitro!`;
+  }
+  if (toast.isSelf) return `🌫️ You fogged ${toast.targetNickname ?? 'a rival'}!`;
+  if (toast.targetedMe) return `🌫️ ${toast.fromNickname} fogged you!`;
+  return `🌫️ ${toast.fromNickname} fogged ${toast.targetNickname ?? 'a rival'}!`;
+}
 
 interface WordBattleStageProps {
   client: RoomClient;
@@ -35,6 +56,9 @@ interface HudState {
   judgementSeq: number;
   milestone: number | null;
   milestoneSeq: number;
+  heldPowerUp: PowerUpType | null;
+  powerUpToast: PowerUpToast | null;
+  powerUpToastSeq: number;
 }
 
 interface StageState {
@@ -53,6 +77,9 @@ const INITIAL_HUD: HudState = {
   judgementSeq: 0,
   milestone: null,
   milestoneSeq: 0,
+  heldPowerUp: null,
+  powerUpToast: null,
+  powerUpToastSeq: 0,
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
@@ -61,6 +88,14 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [eliminated, setEliminated] = useState(false);
+  const [fogged, setFogged] = useState(false);
+
+  // The battle-run effect below only re-mounts on song/difficulty change, so it
+  // can't read a fresh `racers` prop (which updates every progress tick) out of
+  // its own closure — this ref gives its Space-key handler the current standings
+  // for Fog's "target whoever's currently ahead of me" auto-targeting.
+  const racersRef = useRef(racers);
+  racersRef.current = racers;
 
   useEffect(() => {
     const song = getSongById(room.songId ?? '');
@@ -85,7 +120,10 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
     const localDelayMs = (room.startAtMs ?? Date.now() + 3000) - Date.now();
     const startAt = ctx.currentTime + Math.max(0, localDelayMs) / 1000;
     const durationSec = song.durationSec;
-    scheduleSong(ctx, song, startAt, masterGain);
+    const reactiveLayers = scheduleSong(ctx, song, startAt, masterGain);
+    // Power-ups target an individual opponent, which has no sensible meaning
+    // against a shared team car — off for the first version of Team Mode races.
+    const powerUpsEnabled = !room.teamMode;
 
     let finished = false;
     let crashedOut = false;
@@ -93,11 +131,15 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
     let progress = 0;
     let lastSent = -Infinity;
     let comboMilestonesHit = 0;
+    let heldPowerUp: PowerUpType | null = null;
+    let fogTimer = 0;
 
     function teardown() {
       cancelAnimationFrame(raf);
+      window.clearTimeout(fogTimer);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      client.setOnPowerUpUsed(null);
     }
 
     function finishRace(wonByFinish: boolean) {
@@ -117,7 +159,16 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
       const hitNewMilestone = judgement !== 'miss' && milestoneIndex !== -1 && milestoneIndex >= comboMilestonesHit;
       if (hitNewMilestone) comboMilestonesHit = milestoneIndex + 1;
 
+      applyIntensity(ctx, reactiveLayers, runner.multiplier());
+
+      // One held charge at a time — a milestone hit while already holding one
+      // is a wash, rewarding using what you have over stockpiling.
+      if (hitNewMilestone && powerUpsEnabled && !heldPowerUp) {
+        heldPowerUp = milestoneIndex % 2 === 0 ? 'nitro' : 'fog';
+      }
+
       setHud((h) => ({
+        ...h,
         score: runner.score,
         combo: runner.combo,
         accuracy: runner.accuracy,
@@ -125,6 +176,7 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
         judgementSeq: h.judgementSeq + 1,
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
+        heldPowerUp,
       }));
     }
 
@@ -137,10 +189,64 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
     }
 
     function advanceCar(judgement: Judgement) {
-      const speed = judgement === 'miss' ? MISS_ADVANCE_FRACTION : runner.multiplier();
-      progress = Math.min(1, progress + (1 / totalWords) * speed);
+      progress = advanceCarProgress(progress, totalWords, judgement, runner.multiplier());
       onCarProgress(progress);
       if (progress >= 1) finishRace(true);
+    }
+
+    /** Fog always targets whoever's currently ahead of you among the OTHER racers — never a teammate-less concept in FFA, and never yourself. */
+    function currentLeader(): Racer | null {
+      const others = racersRef.current.filter((r) => r.id !== client.id && !r.eliminated);
+      if (others.length === 0) return null;
+      return others.reduce((best, r) => (r.carProgress > best.carProgress ? r : best));
+    }
+
+    function handlePowerUpUsed(event: PowerUpUsedEvent) {
+      if (event.type === 'fog' && event.targetId === client.id) {
+        setFogged(true);
+        window.clearTimeout(fogTimer);
+        fogTimer = window.setTimeout(() => setFogged(false), FOG_DURATION_MS);
+      }
+
+      const fromNickname = racersRef.current.find((r) => r.id === event.fromId)?.nickname ?? 'Someone';
+      const targetNickname = event.targetId
+        ? (racersRef.current.find((r) => r.id === event.targetId)?.nickname ?? null)
+        : null;
+
+      setHud((h) => ({
+        ...h,
+        powerUpToast: {
+          type: event.type,
+          fromNickname,
+          targetNickname,
+          isSelf: event.fromId === client.id,
+          targetedMe: event.targetId === client.id,
+        },
+        powerUpToastSeq: h.powerUpToastSeq + 1,
+      }));
+    }
+
+    function activatePowerUp() {
+      const type = heldPowerUp;
+      if (!type) return;
+
+      if (type === 'nitro') {
+        progress = Math.min(1, progress + NITRO_BOOST);
+        onCarProgress(progress);
+        playChime(ctx, fxGain, 'nitro');
+        client.usePowerUp('nitro', null);
+        heldPowerUp = null;
+        setHud((h) => ({ ...h, heldPowerUp: null }));
+        if (progress >= 1) finishRace(true);
+        return;
+      }
+
+      const target = currentLeader();
+      if (!target) return; // nobody to fog yet — keep the charge
+      playChime(ctx, fxGain, 'fog');
+      client.usePowerUp('fog', target.id);
+      heldPowerUp = null;
+      setHud((h) => ({ ...h, heldPowerUp: null }));
     }
 
     function processLetter(letter: string) {
@@ -164,6 +270,11 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
         onLeave();
         return;
       }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (powerUpsEnabled && !finished && !crashedOut) activatePowerUp();
+        return;
+      }
       if (finished || crashedOut || e.repeat || !LETTER_RE.test(e.key)) return;
       const letter = e.key.toUpperCase();
       setActiveKey(letter);
@@ -178,6 +289,7 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    if (powerUpsEnabled) client.setOnPowerUpUsed(handlePowerUpUsed);
 
     function loop() {
       if (!finished) {
@@ -252,6 +364,14 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
           <span className="gameplay-hud__label">Accuracy</span>
           <span className="gameplay-hud__value">{hud.accuracy.toFixed(1)}%</span>
         </div>
+        {hud.heldPowerUp && (
+          <div className="gameplay-hud__stat">
+            <span className="gameplay-hud__label">Power-Up</span>
+            <span className="gameplay-hud__value gameplay-hud__value--powerup">
+              {hud.heldPowerUp === 'nitro' ? '🔥 Nitro' : '🌫️ Fog'} · SPACE
+            </span>
+          </div>
+        )}
       </div>
 
       <RaceTrack racers={racers} />
@@ -263,18 +383,25 @@ export default function WordBattleStage({ client, room, racers, onCarProgress, o
           fractionRemaining={stage.fractionRemaining}
           overtime={stage.overtime}
           upcoming={stage.upcoming}
+          fogged={fogged}
         />
         <AnimatedKeyboard mode="live" activeKey={activeKey} />
 
         {hud.lastJudgement && (
-          <div key={hud.judgementSeq} className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}>
+          <div key={`judgement-${hud.judgementSeq}`} className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}>
             {hud.lastJudgement.toUpperCase()}
           </div>
         )}
 
         {hud.milestone && (
-          <div key={hud.milestoneSeq} className="gameplay-milestone">
+          <div key={`milestone-${hud.milestoneSeq}`} className="gameplay-milestone">
             {hud.milestone}x COMBO
+          </div>
+        )}
+
+        {hud.powerUpToast && (
+          <div key={`powerup-${hud.powerUpToastSeq}`} className="battle-powerup-toast">
+            {powerUpToastText(hud.powerUpToast)}
           </div>
         )}
 

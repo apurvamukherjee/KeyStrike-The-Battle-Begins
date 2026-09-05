@@ -1,4 +1,4 @@
-import type { SongDefinition, SynthNote, Waveform } from '../types/song';
+import type { SongDefinition, SynthNote, TrackRole, Waveform } from '../types/song';
 
 let sharedCtx: AudioContext | null = null;
 let noiseBuffer: AudioBuffer | null = null;
@@ -77,7 +77,7 @@ function isNoise(wave: Waveform): wave is 'noise' {
   return wave === 'noise';
 }
 
-export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss' | 'onbeat';
+export type ChimeKind = 'key' | 'perfect' | 'good' | 'miss' | 'onbeat' | 'nitro' | 'fog';
 
 const CHIME_FREQ: Record<ChimeKind, number> = {
   key: 1200,
@@ -85,6 +85,8 @@ const CHIME_FREQ: Record<ChimeKind, number> = {
   good: 660,
   miss: 220,
   onbeat: 1600,
+  nitro: 1100,
+  fog: 340,
 };
 
 /**
@@ -112,17 +114,40 @@ export function playChime(ctx: AudioContext, destination: AudioNode, kind: Chime
   osc.stop(now + duration + 0.02);
 }
 
+export interface ReactiveLayer {
+  node: GainNode;
+  /** The gain this layer ramps up to at full (4x combo) intensity. */
+  maxGain: number;
+}
+
+/** GainNode handles for a scheduled song's reactive layers, keyed by role — see engine/musicIntensity.ts. */
+export type ReactiveGainNodes = Partial<Record<TrackRole, ReactiveLayer>>;
+
 /**
  * Schedules every track of a song against the audio clock starting at `startAt`
  * (in ctx.currentTime terms) through `masterGain`. Callers stop the whole song by
  * disconnecting `masterGain` — the still-running oscillators then have nowhere to
  * output to, and are GC'd once their scheduled stop() elapses.
+ *
+ * Every note (including a reactive layer's) is scheduled up front like the rest
+ * of the backing track — there's no look-ahead scheduler to revisit later — so a
+ * `role`-tagged track starts silent and is only ever heard by ramping its
+ * returned GainNode's gain up live via musicIntensity.applyIntensity.
  */
-export function scheduleSong(ctx: AudioContext, song: SongDefinition, startAt: number, masterGain: GainNode) {
+export function scheduleSong(
+  ctx: AudioContext,
+  song: SongDefinition,
+  startAt: number,
+  masterGain: GainNode
+): ReactiveGainNodes {
+  const reactiveLayers: ReactiveGainNodes = {};
+
   for (const track of song.tracks) {
     const trackGain = ctx.createGain();
-    trackGain.gain.value = track.gain ?? 0.2;
+    const maxGain = track.gain ?? 0.2;
+    trackGain.gain.value = track.role ? 0 : maxGain;
     trackGain.connect(masterGain);
+    if (track.role) reactiveLayers[track.role] = { node: trackGain, maxGain };
 
     for (const note of track.notes) {
       if (isNoise(track.wave)) {
@@ -132,4 +157,6 @@ export function scheduleSong(ctx: AudioContext, song: SongDefinition, startAt: n
       }
     }
   }
+
+  return reactiveLayers;
 }

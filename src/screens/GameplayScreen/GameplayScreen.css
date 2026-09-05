@@ -41,6 +41,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.gameplay-race {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
 .gameplay-progress {
   flex: 0 0 auto;
   height: 3px;
