@@ -14,7 +14,13 @@ export interface DuelStrike {
 }
 
 interface DuelArenaProps {
-  /** Exactly two racers — Duel Mode is 1v1 only for this first version. */
+  /**
+   * Exactly two racers/sides. For a Team Duel, each side is the single
+   * team-combined `Racer` BattleScreen already builds for racing Team Mode
+   * (id `team-A`/`team-B`, carProgress = the pair's summed progress) — its
+   * optional `members` array is what tells this component to render a
+   * second, unanimated teammate sprite alongside the primary fighter.
+   */
   racers: Racer[];
   strike?: DuelStrike | null;
   /** Round wins so far this best-of-N match — omit for a single, non-match duel. Shown live, not just on the results screen, so the stakes of the current round are always visible. */
@@ -210,24 +216,38 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
           className={`duel-arena__fighter duel-arena__fighter--left${leftIsVictor ? ' duel-arena__fighter--victor' : ''}${rightIsVictor ? ' duel-arena__fighter--defeated' : ''}`}
         >
           <div className="duel-arena__plate">
-            <span className="duel-arena__plate-name">{left.nickname}</span>
+            <span className="duel-arena__plate-name">
+              {left.members ? left.members.map((m) => m.nickname).join(' & ') : left.nickname}
+            </span>
             <span className="duel-arena__plate-hp">
               <span className="duel-arena__plate-hp-fill" style={{ width: `${leftHp}%` }} />
             </span>
           </div>
-          <Swordsman index={left.avatarIndex} bodyRef={leftBodyRef} swordRef={leftSwordRef} />
+          <div className="duel-arena__fighter-group">
+            {left.members && left.members.length > 1 && (
+              <Swordsman index={left.members[1].avatarIndex} className="duel-arena__ally" />
+            )}
+            <Swordsman index={left.avatarIndex} bodyRef={leftBodyRef} swordRef={leftSwordRef} />
+          </div>
         </div>
 
         <div
           className={`duel-arena__fighter duel-arena__fighter--right${rightIsVictor ? ' duel-arena__fighter--victor' : ''}${leftIsVictor ? ' duel-arena__fighter--defeated' : ''}`}
         >
           <div className="duel-arena__plate">
-            <span className="duel-arena__plate-name">{right.nickname}</span>
+            <span className="duel-arena__plate-name">
+              {right.members ? right.members.map((m) => m.nickname).join(' & ') : right.nickname}
+            </span>
             <span className="duel-arena__plate-hp">
               <span className="duel-arena__plate-hp-fill" style={{ width: `${rightHp}%` }} />
             </span>
           </div>
-          <Swordsman index={right.avatarIndex} bodyRef={rightBodyRef} swordRef={rightSwordRef} />
+          <div className="duel-arena__fighter-group">
+            {right.members && right.members.length > 1 && (
+              <Swordsman index={right.members[1].avatarIndex} className="duel-arena__ally" />
+            )}
+            <Swordsman index={right.avatarIndex} bodyRef={rightBodyRef} swordRef={rightSwordRef} />
+          </div>
         </div>
       </div>
 

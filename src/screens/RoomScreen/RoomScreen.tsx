@@ -56,7 +56,8 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
   };
   const teamsReady = !room.teamMode || (teamCounts.A > 0 && teamCounts.B > 0);
   const connectedCount = room.players.filter((p) => p.connected).length;
-  const duelReady = room.mode !== 'duel' || connectedCount === 2;
+  const duelCap = room.teamMode ? 4 : 2;
+  const duelReady = room.mode !== 'duel' || connectedCount === duelCap;
 
   return (
     <div className="screen">
@@ -66,7 +67,9 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
           {copied ? 'Copied' : 'Copy'}
         </button>
       </h1>
-      <p className="tagline">Share this code — {room.mode === 'duel' ? 'exactly 2 players' : 'up to 4 players'}.</p>
+      <p className="tagline">
+        Share this code — {room.mode === 'duel' ? `exactly ${duelCap} players` : 'up to 4 players'}.
+      </p>
 
       <div className="panel room__panel">
         <ul className="room__players">
@@ -106,15 +109,13 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         )}
         {isHost && (
           <div className="room__mode-toggles">
-            {room.mode !== 'duel' && (
-              <button
-                type="button"
-                className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
-                onClick={() => client.toggleTeamMode()}
-              >
-                Team Mode: {room.teamMode ? 'On' : 'Off'}
-              </button>
-            )}
+            <button
+              type="button"
+              className={`room__team-mode-toggle${room.teamMode ? ' room__team-mode-toggle--active' : ''}`}
+              onClick={() => client.toggleTeamMode()}
+            >
+              {room.mode === 'duel' ? 'Team Duel (2v2)' : 'Team Mode'}: {room.teamMode ? 'On' : 'Off'}
+            </button>
             {room.mode === 'song' && (
               <button
                 type="button"
@@ -131,7 +132,9 @@ export default function RoomScreen({ client, initialRoom, onEnterBattle, onLeave
         )}
         {room.mode === 'duel' && (
           <p className="room__hint">
-            {duelReady ? 'Duel Mode — first to fully strike the other down wins.' : 'Duel Mode needs exactly 2 players to start.'}
+            {duelReady
+              ? `${room.teamMode ? 'Team Duel' : 'Duel Mode'} — first side to fully strike the other down wins.`
+              : `${room.teamMode ? 'Team Duel' : 'Duel Mode'} needs exactly ${duelCap} players to start.`}
           </p>
         )}
 

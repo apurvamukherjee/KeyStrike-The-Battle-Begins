@@ -136,6 +136,19 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     const reactiveLayers = scheduleSong(ctx, song, startAt, masterGain);
     const powerUpsEnabled = !room.teamMode;
 
+    // Team Duel: DuelArena renders one racer per SIDE (team-A/team-B, already
+    // combined by BattleScreen's team-progress-summing), so a strike has to
+    // be attributed to a side, not an individual socket id, for the swing
+    // animation's attacker lookup (left/right.id === strike.strikerId) to
+    // match anything. 1v1 duels are unaffected — fighterIdFor is the identity
+    // function when room.teamMode is off.
+    function fighterIdFor(playerId: string): string {
+      if (!room.teamMode) return playerId;
+      const p = room.players.find((pl) => pl.id === playerId);
+      return p?.team ? `team-${p.team}` : playerId;
+    }
+    const myFighterId = fighterIdFor(client.id);
+
     let finished = false;
     let raf = 0;
     let progress = 0;
@@ -200,7 +213,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
         heldPowerUp,
-        strike: judgement !== 'miss' ? { strikerId: client.id, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
+        strike: judgement !== 'miss' ? { strikerId: myFighterId, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
       }));
     }
 
@@ -210,7 +223,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       if (progress >= 1) finishDuel(true);
     }
 
-    /** Only one other racer exists in a duel, so this always resolves to "the opponent." */
+    /** Power-ups are off in Team Duel (powerUpsEnabled above), so this only ever runs in 1v1, where the other racer is always the opponent. */
     function opponent(): Racer | null {
       return racersRef.current.find((r) => r.id !== client.id) ?? null;
     }
@@ -240,11 +253,11 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       }));
     }
 
-    /** The opponent's own clean word landing — I already animated my own strike instantly in bumpHud, so only react here when it isn't mine. */
+    /** The opponent's (or, in Team Duel, a teammate's) own clean word landing — I already animated my own strike instantly in bumpHud, so only react here when it isn't mine. */
     function handleWordStruck(event: WordStruckEvent) {
       if (event.fromId === client.id) return;
       playChime(ctx, fxGain, 'clash');
-      setHud((h) => ({ ...h, strike: { strikerId: event.fromId, seq: (h.strike?.seq ?? 0) + 1 } }));
+      setHud((h) => ({ ...h, strike: { strikerId: fighterIdFor(event.fromId), seq: (h.strike?.seq ?? 0) + 1 } }));
     }
 
     function activatePowerUp() {
@@ -379,11 +392,17 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
   }, [room.songId, room.difficulty]);
 
   const me = room.players.find((p) => p.id === client.id);
-  const opponentPlayer = room.players.find((p) => p.id !== client.id);
-  const matchScore = {
-    you: me ? (room.duelWins[me.clientId] ?? 0) : 0,
-    opponent: opponentPlayer ? (room.duelWins[opponentPlayer.clientId] ?? 0) : 0,
-  };
+  // Team Duel: duelWins is keyed by team letter, not clientId — see server's resolveDuelRoundWin.
+  const matchScore =
+    room.teamMode && me?.team
+      ? { you: room.duelWins[me.team] ?? 0, opponent: room.duelWins[me.team === 'A' ? 'B' : 'A'] ?? 0 }
+      : {
+          you: me ? (room.duelWins[me.clientId] ?? 0) : 0,
+          opponent: (() => {
+            const opponentPlayer = room.players.find((p) => p.id !== client.id);
+            return opponentPlayer ? (room.duelWins[opponentPlayer.clientId] ?? 0) : 0;
+          })(),
+        };
 
   return (
     <>

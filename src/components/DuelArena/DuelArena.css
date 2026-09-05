@@ -210,6 +210,32 @@
   transition: width 480ms cubic-bezier(0.22, 0.68, 0, 1.4);
 }
 
+/* Team Duel: a second, unanimated teammate sprite standing just behind and
+   toward the middle of the primary (GSAP-driven) fighter — DOM order alone
+   keeps it behind the primary without needing z-index. */
+.duel-arena__fighter-group {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.duel-arena__ally {
+  position: absolute;
+  bottom: 0;
+  transform: scale(0.6);
+  transform-origin: bottom center;
+  opacity: 0.75;
+}
+
+.duel-arena__fighter--left .duel-arena__ally {
+  right: -14px;
+}
+
+.duel-arena__fighter--right .duel-arena__ally {
+  left: -14px;
+}
+
 .duel-arena__fighter--victor {
   filter: drop-shadow(0 0 18px rgba(207, 159, 79, 0.55));
 }

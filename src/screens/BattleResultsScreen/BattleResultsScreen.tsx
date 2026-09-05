@@ -71,15 +71,63 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
   }, [client]);
 
   if (room.mode === 'duel') {
+    const zeroStats = { score: 0, accuracy: 0, maxCombo: 0 };
+    const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
+    const nextRoundHandlers = {
+      onNextRound:
+        isHost && !room.duelMatchOver
+          ? () => client.nextRound(songs[Math.floor(Math.random() * songs.length)].id)
+          : undefined,
+      onRematch: isHost && room.duelMatchOver ? onRematch : undefined,
+      onLeave: () => {
+        client.leaveRoom();
+        client.destroy();
+        clearPendingSession();
+        onLeave();
+      },
+    };
+
+    if (room.teamMode) {
+      const myTeam = room.players.find((p) => p.id === client.id)?.team ?? null;
+      if (!myTeam) return null;
+      const otherTeam: Team = myTeam === 'A' ? 'B' : 'A';
+      const mine = room.players.filter((p) => p.team === myTeam);
+      const theirs = room.players.filter((p) => p.team === otherTeam);
+      // A side's combined stats: total score/max-of-max-combo across both
+      // teammates, average accuracy — same "sum the side" spirit as the
+      // server's teamProgressTotals, just for the results screen's tiles.
+      const combine = (members: RoomPlayer[]) => {
+        const results = members.map((p) => p.result ?? zeroStats);
+        if (results.length === 0) return zeroStats;
+        return {
+          score: results.reduce((sum, r) => sum + r.score, 0),
+          maxCombo: Math.max(...results.map((r) => r.maxCombo)),
+          accuracy: results.reduce((sum, r) => sum + r.accuracy, 0) / results.length,
+        };
+      };
+      return (
+        <DuelResultsScreen
+          won={room.winningTeam === myTeam}
+          youNickname={mine.map((p) => p.nickname).join(' & ') || 'Your Team'}
+          youAvatarIndex={mine[0]?.avatarIndex ?? 0}
+          opponentNickname={theirs.map((p) => p.nickname).join(' & ') || 'Rival Team'}
+          opponentAvatarIndex={theirs[0]?.avatarIndex ?? 0}
+          youStats={combine(mine)}
+          opponentStats={combine(theirs)}
+          matchScore={{ you: room.duelWins[myTeam] ?? 0, opponent: room.duelWins[otherTeam] ?? 0 }}
+          winsNeeded={winsNeeded}
+          matchOver={room.duelMatchOver}
+          {...nextRoundHandlers}
+        />
+      );
+    }
+
     const me = room.players.find((p) => p.id === client.id);
     const opponent = room.players.find((p) => p.id !== client.id);
     if (!me || !opponent) return null;
-    const won = me.clientId === room.winnerId;
-    const zeroStats = { score: 0, accuracy: 0, maxCombo: 0 };
-    const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
     return (
       <DuelResultsScreen
-        won={won}
+        won={me.clientId === room.winnerId}
         youNickname={me.nickname}
         youAvatarIndex={me.avatarIndex}
         opponentNickname={opponent.nickname}
@@ -89,18 +137,7 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
         matchScore={{ you: room.duelWins[me.clientId] ?? 0, opponent: room.duelWins[opponent.clientId] ?? 0 }}
         winsNeeded={winsNeeded}
         matchOver={room.duelMatchOver}
-        onNextRound={
-          isHost && !room.duelMatchOver
-            ? () => client.nextRound(songs[Math.floor(Math.random() * songs.length)].id)
-            : undefined
-        }
-        onRematch={isHost && room.duelMatchOver ? onRematch : undefined}
-        onLeave={() => {
-          client.leaveRoom();
-          client.destroy();
-          clearPendingSession();
-          onLeave();
-        }}
+        {...nextRoundHandlers}
       />
     );
   }

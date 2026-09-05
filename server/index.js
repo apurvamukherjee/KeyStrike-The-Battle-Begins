@@ -86,6 +86,25 @@ function connectedPlayers(room) {
   return [...room.players.values()].filter((p) => p.connected);
 }
 
+/** Sums each team's live carProgress — the shared "how close is this side to a finish" figure used by both racing Team Mode and 2v2 Team Duels. */
+function teamProgressTotals(room) {
+  const totals = { A: 0, B: 0 };
+  for (const p of room.players.values()) {
+    if (p.team === 'A' || p.team === 'B') totals[p.team] += p.progress?.carProgress ?? 0;
+  }
+  return totals;
+}
+
+/** Duel Mode only: records a round win (by clientId for 1v1, by team letter for 2v2) and ends the match once winsNeeded is reached. */
+function resolveDuelRoundWin(room, winnerKey) {
+  room.duelWins[winnerKey] = (room.duelWins[winnerKey] ?? 0) + 1;
+  const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
+  room.duelMatchOver = room.duelWins[winnerKey] >= winsNeeded;
+  if (room.teamMode) room.winningTeam = winnerKey;
+  else room.winnerId = winnerKey;
+  room.phase = 'results';
+}
+
 function cleanupRoom(io, room) {
   if (connectedPlayers(room).length === 0) {
     clearTimeout(room.finishTimeout);
@@ -143,9 +162,9 @@ io.on('connection', (socket) => {
     const room = rooms.get(String(code || '').toUpperCase());
     if (!room) return ack?.({ ok: false, error: 'Room not found' });
     if (room.phase !== 'lobby') return ack?.({ ok: false, error: 'Battle already in progress' });
-    const cap = room.mode === 'duel' ? 2 : MAX_PLAYERS;
+    const cap = room.mode === 'duel' ? (room.teamMode ? 4 : 2) : MAX_PLAYERS;
     if (connectedPlayers(room).length >= cap) {
-      return ack?.({ ok: false, error: room.mode === 'duel' ? 'Duel room is full (2 players)' : 'Room is full' });
+      return ack?.({ ok: false, error: room.mode === 'duel' ? `Duel room is full (${cap} players)` : 'Room is full' });
     }
 
     room.players.set(socket.id, newPlayer(socket.id, nickname, room.players.size % 10, clientId || socket.id));
@@ -189,13 +208,13 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
     if (mode !== 'song' && mode !== 'sentence' && mode !== 'duel') return;
-    // Duel Mode is 1v1 only — refuse to switch into it with a third/fourth
-    // player already seated, mirroring the join-room cap below.
-    if (mode === 'duel' && connectedPlayers(room).length > 2) return;
+    // Duel Mode is 1v1 (or 2v2 with Team Duel on) — refuse to switch into it
+    // with more players already seated than the current mode supports,
+    // mirroring the join-room cap below.
+    if (mode === 'duel' && !room.teamMode && connectedPlayers(room).length > 2) return;
     room.mode = mode;
     room.sentenceText = null;
     if (mode === 'sentence' || mode === 'duel') room.suddenDeath = false;
-    if (mode === 'duel') room.teamMode = false;
     broadcastRoom(io, room);
   });
 
@@ -214,10 +233,16 @@ io.on('connection', (socket) => {
     broadcastRoom(io, room);
   });
 
+  // Also doubles as the "Team Duel (2v2)" toggle when room.mode === 'duel' —
+  // same flag, same 'team' field/select-team handler as racing Team Mode.
   socket.on('toggle-team-mode', () => {
     const room = rooms.get(currentRoomCode);
-    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.mode === 'duel') return;
-    room.teamMode = !room.teamMode;
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    const next = !room.teamMode;
+    // Refuse to turn it off with more than 2 already seated in a duel room —
+    // that would leave a 1v1 duel room over its cap.
+    if (!next && room.mode === 'duel' && connectedPlayers(room).length > 2) return;
+    room.teamMode = next;
     broadcastRoom(io, room);
   });
 
@@ -250,7 +275,7 @@ io.on('connection', (socket) => {
     } else if (!room.songId) {
       return;
     }
-    if (room.mode === 'duel' && connectedPlayers(room).length !== 2) return;
+    if (room.mode === 'duel' && connectedPlayers(room).length !== (room.teamMode ? 4 : 2)) return;
     if (room.teamMode) {
       const players = [...room.players.values()];
       const hasA = players.some((p) => p.team === 'A');
@@ -293,6 +318,7 @@ io.on('connection', (socket) => {
     room.phase = 'countdown';
     room.startAtMs = Date.now() + 3000;
     room.winnerId = null;
+    room.winningTeam = null;
     for (const p of room.players.values()) {
       p.finished = false;
       p.result = null;
@@ -318,11 +344,16 @@ io.on('connection', (socket) => {
     // server (not a client's own 'finished' event) has to watch both
     // members' progress and declare the win itself once a team's summed
     // carProgress crosses the finish line.
-    if (room.teamMode && !room.winningTeam) {
-      const totals = { A: 0, B: 0 };
-      for (const p of room.players.values()) {
-        if (p.team === 'A' || p.team === 'B') totals[p.team] += p.progress?.carProgress ?? 0;
-      }
+    if (room.teamMode && room.mode === 'duel') {
+      // 2v2 Team Duel: a side's damage is its two members' summed progress,
+      // same combining as racing below — but this resolves into the duel's
+      // round/match structure (duelWins, best-of-N) instead of ending the
+      // whole race outright, mirroring the 'finished' handler's own-finish path.
+      const totals = teamProgressTotals(room);
+      const winningTeam = totals.A >= 1 ? 'A' : totals.B >= 1 ? 'B' : null;
+      if (winningTeam) resolveDuelRoundWin(room, winningTeam);
+    } else if (room.teamMode && !room.winningTeam) {
+      const totals = teamProgressTotals(room);
       const winningTeam = totals.A >= 1 ? 'A' : totals.B >= 1 ? 'B' : null;
       if (winningTeam) {
         room.winningTeam = winningTeam;
@@ -391,11 +422,32 @@ io.on('connection', (socket) => {
     // at the server first isn't a meaningful tiebreak. Wait for the other
     // fighter too, then whoever dealt more damage (higher carProgress from
     // the regular progress broadcast) wins.
-    //
-    // roundWinnerId is keyed by the player's stable clientId, not socket.id —
-    // a refresh mid-match assigns a new socket.id, and duelWins/winnerId need
-    // to survive that (racing's winnerId is unaffected and stays socket-id-based).
     if (room.mode === 'duel') {
+      if (room.teamMode) {
+        // 2v2 Team Duel: a round's winner is a side, not a single fighter —
+        // reuses racing Team Mode's existing winningTeam field rather than
+        // overloading winnerId with a team letter. A side's own summed
+        // carProgress reaching 1 is already caught by the 'progress' handler
+        // above (resolveDuelRoundWin sets phase to 'results'), so the guard
+        // at the top of this handler naturally ignores a late 'finished' from
+        // the losing side once that's happened — this only still runs for a
+        // genuine wonByFinish, or once every fighter's song has run out.
+        let roundWinnerTeam = null;
+        if (result.wonByFinish) {
+          roundWinnerTeam = player.team;
+        } else if ([...room.players.values()].every((p) => p.finished)) {
+          const totals = teamProgressTotals(room);
+          roundWinnerTeam = totals.A >= totals.B ? 'A' : 'B';
+        }
+        if (roundWinnerTeam) resolveDuelRoundWin(room, roundWinnerTeam);
+        broadcastRoom(io, room);
+        return;
+      }
+
+      // roundWinnerId is keyed by the player's stable clientId, not socket.id
+      // — a refresh mid-match assigns a new socket.id, and duelWins/winnerId
+      // need to survive that (racing's winnerId is unaffected and stays
+      // socket-id-based).
       let roundWinnerId = null;
       if (result.wonByFinish) {
         roundWinnerId = player.clientId;
@@ -403,13 +455,7 @@ io.on('connection', (socket) => {
         const [a, b] = [...room.players.values()];
         roundWinnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.clientId : b.clientId;
       }
-      if (roundWinnerId) {
-        room.duelWins[roundWinnerId] = (room.duelWins[roundWinnerId] ?? 0) + 1;
-        const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
-        room.duelMatchOver = room.duelWins[roundWinnerId] >= winsNeeded;
-        room.winnerId = roundWinnerId;
-        room.phase = 'results';
-      }
+      if (roundWinnerId) resolveDuelRoundWin(room, roundWinnerId);
       broadcastRoom(io, room);
       return;
     }
