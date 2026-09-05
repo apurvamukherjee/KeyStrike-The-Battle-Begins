@@ -50,7 +50,11 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
   useEffect(() => {
     const me = room.players.find((p) => p.id === client.id);
     if (!me) return;
-    const won = room.teamMode ? room.winningTeam !== null && me.team === room.winningTeam : me.id === room.winnerId;
+    const won = room.teamMode
+      ? room.winningTeam !== null && me.team === room.winningTeam
+      : room.mode === 'duel'
+        ? me.clientId === room.winnerId
+        : me.id === room.winnerId;
     setStreak(recordBattleOutcome(me.nickname, won));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -70,7 +74,7 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
     const me = room.players.find((p) => p.id === client.id);
     const opponent = room.players.find((p) => p.id !== client.id);
     if (!me || !opponent) return null;
-    const won = me.id === room.winnerId;
+    const won = me.clientId === room.winnerId;
     const zeroStats = { score: 0, accuracy: 0, maxCombo: 0 };
     const winsNeeded = Math.ceil((room.duelBestOf ?? 3) / 2);
     return (
@@ -82,7 +86,7 @@ export default function BattleResultsScreen({ client, room, onRematch, onEnterBa
         opponentAvatarIndex={opponent.avatarIndex}
         youStats={me.result ?? zeroStats}
         opponentStats={opponent.result ?? zeroStats}
-        matchScore={{ you: room.duelWins[me.id] ?? 0, opponent: room.duelWins[opponent.id] ?? 0 }}
+        matchScore={{ you: room.duelWins[me.clientId] ?? 0, opponent: room.duelWins[opponent.clientId] ?? 0 }}
         winsNeeded={winsNeeded}
         matchOver={room.duelMatchOver}
         onNextRound={

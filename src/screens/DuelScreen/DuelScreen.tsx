@@ -11,6 +11,7 @@ import type { Difficulty } from '../../types/song';
 import { recordRun, recordKeyStats, type KeyStat } from '../../utils/stats';
 import { recordDuelWin } from '../../utils/duelProgress';
 import { formatScore } from '../../utils/format';
+import { attachMobileTypingInput, IS_TOUCH } from '../../utils/mobileTyping';
 import { getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import DuelArena, { type DuelStrike } from '../../components/DuelArena/DuelArena';
@@ -89,6 +90,8 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
   const [racers, setRacers] = useState<[Racer, Racer] | null>(null);
   const [outcome, setOutcome] = useState<'won' | 'lost' | null>(null);
   const [resultStats, setResultStats] = useState<ResultStats | null>(null);
+  const [mobileStarted, setMobileStarted] = useState(!IS_TOUCH);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const actionsRef = useRef({ togglePause: () => {}, quit: () => {} });
 
   useEffect(() => {
@@ -98,6 +101,12 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
     // keep DuelResultsScreen showing right through a freshly-started fight.
     setOutcome(null);
     setResultStats(null);
+
+    // Touch devices wait at a "Tap to Start" gate (see the render below) so
+    // the hidden mobile input's focus() call happens inside a real user
+    // gesture — mobileStarted flips true exactly once per match and this
+    // effect re-runs from that tap, same as every round after it.
+    if (!mobileStarted) return;
 
     if (!enemy) {
       onExit();
@@ -134,11 +143,15 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
     let cpuState: CpuState = initCpuState(activeEnemy.profile, 0);
     const keyStats: Record<string, KeyStat> = {};
     let lastAcceptedTime: number | null = null;
+    let mobileKeyFlashTimer = 0;
+    let detachMobileInput = () => {};
 
     function teardown() {
       cancelAnimationFrame(raf);
+      window.clearTimeout(mobileKeyFlashTimer);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      detachMobileInput();
       document.removeEventListener('visibilitychange', onVisibility);
     }
 
@@ -266,8 +279,19 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
       if (document.hidden && !isPaused) setPaused(true);
     }
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    if (IS_TOUCH) {
+      detachMobileInput = attachMobileTypingInput(mobileInputRef.current, (letter) => {
+        if (isPaused || finished) return;
+        setActiveKey(letter);
+        window.clearTimeout(mobileKeyFlashTimer);
+        mobileKeyFlashTimer = window.setTimeout(() => setActiveKey(null), 150);
+        processLetter(letter);
+      });
+      mobileInputRef.current?.focus();
+    } else {
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+    }
     document.addEventListener('visibilitychange', onVisibility);
 
     function loop() {
@@ -341,9 +365,38 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId, difficulty, enemyId]);
+  }, [songId, difficulty, enemyId, mobileStarted]);
 
   if (!enemy) return null;
+
+  if (IS_TOUCH && !mobileStarted) {
+    return (
+      <div className="screen">
+        <h1 className="wordmark wordmark--small">Tap to Start</h1>
+        <div className="panel">
+          <p className="gameplay-no-keyboard__copy">
+            KeyStrike is a typing game — tapping below opens your keyboard so you can type each word as it appears.
+          </p>
+        </div>
+        <div className="cap-row">
+          <button
+            type="button"
+            className="cap cap--primary"
+            onClick={() => {
+              getAudioContext().resume().catch(() => {});
+              setMobileStarted(true);
+              window.setTimeout(() => mobileInputRef.current?.focus(), 50);
+            }}
+          >
+            Tap to Start
+          </button>
+          <button type="button" className="cap" onClick={onExit}>
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (outcome && resultStats) {
     const nextScore: MatchScore = {
@@ -372,6 +425,21 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
 
   return (
     <div className="screen gameplay-screen">
+      {IS_TOUCH && (
+        <input
+          ref={mobileInputRef}
+          className="gameplay-mobile-input"
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
+
       <div className="gameplay-hud">
         <div className="gameplay-hud__stat">
           <span className="gameplay-hud__label">Score</span>
@@ -403,7 +471,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
           overtime={stage.overtime}
           upcoming={stage.upcoming}
         />
-        <AnimatedKeyboard mode="live" activeKey={activeKey} />
+        {!IS_TOUCH && <AnimatedKeyboard mode="live" activeKey={activeKey} />}
 
         {hud.lastJudgement && (
           <div key={hud.judgementSeq} className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}>

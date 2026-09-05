@@ -9,6 +9,7 @@ import { clearPendingSession } from '../../multiplayer/session';
 import type { PlayerResult, PowerUpType, PowerUpUsedEvent, RoomState, WordStruckEvent } from '../../multiplayer/types';
 import type { Judgement } from '../../types/game';
 import { formatScore } from '../../utils/format';
+import { attachMobileTypingInput, IS_TOUCH } from '../../utils/mobileTyping';
 import { getInputOffsetMs, getVolume } from '../../utils/settings';
 import AnimatedKeyboard from '../../components/AnimatedKeyboard/AnimatedKeyboard';
 import type { Racer } from '../../components/RaceTrack/RaceTrack';
@@ -94,6 +95,13 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [fogged, setFogged] = useState(false);
+  // The countdown/song clock is server-synced (room.startAtMs) and can't wait
+  // for a tap, so — unlike DuelScreen/GameplayScreen's blocking pre-game gate —
+  // this is a dismissible overlay on top of an already-running battle purely
+  // so the hidden mobile input's focus() happens inside a real user gesture.
+  const [mobileTapped, setMobileTapped] = useState(!IS_TOUCH);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const activatePowerUpRef = useRef<() => void>(() => {});
 
   // The battle-run effect below only re-mounts on song/difficulty change, so it
   // can't read a fresh `racers` prop (which updates every progress tick) out of
@@ -135,12 +143,16 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     let comboMilestonesHit = 0;
     let heldPowerUp: PowerUpType | null = null;
     let fogTimer = 0;
+    let mobileKeyFlashTimer = 0;
+    let detachMobileInput = () => {};
 
     function teardown() {
       cancelAnimationFrame(raf);
       window.clearTimeout(fogTimer);
+      window.clearTimeout(mobileKeyFlashTimer);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      detachMobileInput();
       client.setOnPowerUpUsed(null);
       client.setOnWordStruck(null);
     }
@@ -257,6 +269,9 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       heldPowerUp = null;
       setHud((h) => ({ ...h, heldPowerUp: null }));
     }
+    activatePowerUpRef.current = () => {
+      if (powerUpsEnabled && !finished) activatePowerUp();
+    };
 
     function processLetter(letter: string) {
       const rawSongTime = ctx.currentTime - startAt;
@@ -296,8 +311,18 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
       setActiveKey((k) => (k === letter ? null : k));
     }
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    if (IS_TOUCH) {
+      detachMobileInput = attachMobileTypingInput(mobileInputRef.current, (letter) => {
+        if (finished) return;
+        setActiveKey(letter);
+        window.clearTimeout(mobileKeyFlashTimer);
+        mobileKeyFlashTimer = window.setTimeout(() => setActiveKey(null), 150);
+        processLetter(letter);
+      });
+    } else {
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+    }
     if (powerUpsEnabled) client.setOnPowerUpUsed(handlePowerUpUsed);
     client.setOnWordStruck(handleWordStruck);
 
@@ -353,11 +378,42 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.songId, room.difficulty]);
 
-  const opponentId = racers.find((r) => r.id !== client.id)?.id;
-  const matchScore = { you: room.duelWins[client.id] ?? 0, opponent: opponentId ? (room.duelWins[opponentId] ?? 0) : 0 };
+  const me = room.players.find((p) => p.id === client.id);
+  const opponentPlayer = room.players.find((p) => p.id !== client.id);
+  const matchScore = {
+    you: me ? (room.duelWins[me.clientId] ?? 0) : 0,
+    opponent: opponentPlayer ? (room.duelWins[opponentPlayer.clientId] ?? 0) : 0,
+  };
 
   return (
     <>
+      {IS_TOUCH && (
+        <input
+          ref={mobileInputRef}
+          className="gameplay-mobile-input"
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
+      {IS_TOUCH && !mobileTapped && (
+        <button
+          type="button"
+          className="duel-mobile-tap-overlay"
+          onClick={() => {
+            setMobileTapped(true);
+            mobileInputRef.current?.focus();
+          }}
+        >
+          Tap to type
+        </button>
+      )}
+
       <div className="gameplay-hud">
         <div className="gameplay-hud__stat">
           <span className="gameplay-hud__label">Score</span>
@@ -375,7 +431,22 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
           <div className="gameplay-hud__stat">
             <span className="gameplay-hud__label">Power-Up</span>
             <span className="gameplay-hud__value gameplay-hud__value--powerup">
-              {hud.heldPowerUp === 'nitro' ? '🗡️ Iaijutsu' : '💨 Smoke Bomb'} · SPACE
+              {hud.heldPowerUp === 'nitro' ? '🗡️ Iaijutsu' : '💨 Smoke Bomb'}
+              {IS_TOUCH ? (
+                <>
+                  {' '}
+                  ·{' '}
+                  <button
+                    type="button"
+                    className="duel-mobile-powerup-btn"
+                    onClick={() => activatePowerUpRef.current()}
+                  >
+                    TAP
+                  </button>
+                </>
+              ) : (
+                ' · SPACE'
+              )}
             </span>
           </div>
         )}
@@ -392,7 +463,7 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
           upcoming={stage.upcoming}
           fogged={fogged}
         />
-        <AnimatedKeyboard mode="live" activeKey={activeKey} />
+        {!IS_TOUCH && <AnimatedKeyboard mode="live" activeKey={activeKey} />}
 
         {hud.lastJudgement && (
           <div key={`judgement-${hud.judgementSeq}`} className={`gameplay-judgement gameplay-judgement--${hud.lastJudgement}`}>

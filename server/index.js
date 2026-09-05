@@ -63,6 +63,7 @@ function publicRoom(room) {
     duelMatchOver: room.duelMatchOver,
     players: [...room.players.values()].map((p) => ({
       id: p.id,
+      clientId: p.clientId,
       nickname: p.nickname,
       avatarIndex: p.avatarIndex,
       ready: p.ready,
@@ -125,7 +126,7 @@ io.on('connection', (socket) => {
       winningTeam: null,
       suddenDeath: false,
       duelBestOf: 3,
-      duelWins: {}, // { [playerId]: number of rounds won } — only meaningful when mode === 'duel'
+      duelWins: {}, // { [clientId]: number of rounds won } — only meaningful when mode === 'duel'
       duelMatchOver: false,
       players: new Map(),
       finishTimeout: null,
@@ -390,13 +391,17 @@ io.on('connection', (socket) => {
     // at the server first isn't a meaningful tiebreak. Wait for the other
     // fighter too, then whoever dealt more damage (higher carProgress from
     // the regular progress broadcast) wins.
+    //
+    // roundWinnerId is keyed by the player's stable clientId, not socket.id —
+    // a refresh mid-match assigns a new socket.id, and duelWins/winnerId need
+    // to survive that (racing's winnerId is unaffected and stays socket-id-based).
     if (room.mode === 'duel') {
       let roundWinnerId = null;
       if (result.wonByFinish) {
-        roundWinnerId = socket.id;
+        roundWinnerId = player.clientId;
       } else if ([...room.players.values()].every((p) => p.finished)) {
         const [a, b] = [...room.players.values()];
-        roundWinnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.id : b.id;
+        roundWinnerId = (a.progress?.carProgress ?? 0) >= (b.progress?.carProgress ?? 0) ? a.clientId : b.clientId;
       }
       if (roundWinnerId) {
         room.duelWins[roundWinnerId] = (room.duelWins[roundWinnerId] ?? 0) + 1;

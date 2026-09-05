@@ -40,6 +40,8 @@ export interface WordStruckEvent {
 
 export interface RoomPlayer {
   id: string;
+  /** Stable across a refresh/reconnect (see rejoin-room), unlike `id` which is the live socket id. Duel Mode's duelWins/winnerId are keyed by this. */
+  clientId: string;
   nickname: string;
   avatarIndex: number;
   ready: boolean;
@@ -61,13 +63,14 @@ export interface RoomState {
   sentenceText: string | null;
   difficulty: Difficulty;
   startAtMs: number | null;
+  /** Racing: the winning player's socket id. Duel Mode: the winning player's clientId (survives a rejoin) — see RoomPlayer.clientId. */
   winnerId: string | null;
   teamMode: boolean;
   winningTeam: Team | null;
   suddenDeath: boolean;
   /** Duel Mode only: rounds needed to decide a match (first to `ceil(duelBestOf/2)` round wins). */
   duelBestOf: number;
-  /** Duel Mode only: round wins so far this match, keyed by player id. */
+  /** Duel Mode only: round wins so far this match, keyed by player clientId (not socket id — survives a rejoin). */
   duelWins: Record<string, number>;
   /** Duel Mode only: true once someone has reached the wins needed to take the whole match. */
   duelMatchOver: boolean;

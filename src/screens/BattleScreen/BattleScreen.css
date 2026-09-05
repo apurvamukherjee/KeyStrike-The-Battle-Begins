@@ -108,3 +108,35 @@
 :root[data-reduce-motion='true'] .battle-countdown {
   animation: none;
 }
+
+/* Touch duel: the countdown/song clock is server-synced and can't wait for a
+   tap, so unlike GameplayScreen's blocking "Tap to Start" gate, this is a
+   dismissible overlay on top of an already-running battle — tapping it both
+   focuses the hidden mobile input and hides itself. */
+.duel-mobile-tap-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 10, 0.55);
+  border: none;
+  color: var(--ink-bright);
+  font-family: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.duel-mobile-powerup-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
