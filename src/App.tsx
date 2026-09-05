@@ -13,6 +13,8 @@ import LobbyScreen from './screens/LobbyScreen/LobbyScreen';
 import RoomScreen from './screens/RoomScreen/RoomScreen';
 import BattleScreen from './screens/BattleScreen/BattleScreen';
 import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScreen';
+import DuelSelectScreen from './screens/DuelSelectScreen/DuelSelectScreen';
+import DuelScreen from './screens/DuelScreen/DuelScreen';
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
 import type { RunResult, ScreenState, SentenceRunResult } from './types/game';
 import type { Difficulty } from './types/song';
@@ -29,6 +31,8 @@ type Action =
   | { type: 'GO_SETTINGS' }
   | { type: 'GO_STATS' }
   | { type: 'GO_LOBBY' }
+  | { type: 'GO_DUEL_SELECT' }
+  | { type: 'START_DUEL'; songId: string; difficulty: Difficulty; enemyId: string }
   | { type: 'START_SONG'; songId: string; difficulty: Difficulty; beatChallenge: boolean }
   | { type: 'START_PRACTICE'; songId: string; difficulty: Difficulty }
   | { type: 'FINISH_SONG'; result: RunResult }
@@ -51,6 +55,10 @@ function reducer(state: ScreenState, action: Action): ScreenState {
       return { name: 'stats' };
     case 'GO_LOBBY':
       return { name: 'lobby' };
+    case 'GO_DUEL_SELECT':
+      return { name: 'duelSelect' };
+    case 'START_DUEL':
+      return { name: 'duel', songId: action.songId, difficulty: action.difficulty, enemyId: action.enemyId };
     case 'START_SONG':
       return { name: 'playing', songId: action.songId, difficulty: action.difficulty, beatChallenge: action.beatChallenge };
     case 'START_PRACTICE':
@@ -78,6 +86,7 @@ export default function App() {
   const goSongSelect = useCallback(() => dispatch({ type: 'GO_SONG_SELECT' }), []);
   const goSentence = useCallback(() => dispatch({ type: 'GO_SENTENCE' }), []);
   const goLobby = useCallback(() => dispatch({ type: 'GO_LOBBY' }), []);
+  const goDuelSelect = useCallback(() => dispatch({ type: 'GO_DUEL_SELECT' }), []);
 
   useEffect(() => {
     applyAppearanceSettings();
@@ -121,12 +130,16 @@ export default function App() {
       case 'settings':
       case 'stats':
       case 'lobby':
+      case 'duelSelect':
         backHandlerRef.current = goHome;
         break;
       case 'playing':
       case 'practice':
       case 'results':
         backHandlerRef.current = goSongSelect;
+        break;
+      case 'duel':
+        backHandlerRef.current = goDuelSelect;
         break;
       case 'sentence':
       case 'sentenceResults':
@@ -145,7 +158,7 @@ export default function App() {
       default:
         backHandlerRef.current = goHome;
     }
-  }, [screen, goHome, goSongSelect]);
+  }, [screen, goHome, goSongSelect, goDuelSelect]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -180,6 +193,23 @@ export default function App() {
           onSettings={() => dispatch({ type: 'GO_SETTINGS' })}
           onStats={() => dispatch({ type: 'GO_STATS' })}
           onBattle={goLobby}
+          onDuel={goDuelSelect}
+        />
+      )}
+
+      {screen.name === 'duelSelect' && (
+        <DuelSelectScreen
+          onFight={(songId, difficulty, enemyId) => dispatch({ type: 'START_DUEL', songId, difficulty, enemyId })}
+          onBack={goHome}
+        />
+      )}
+
+      {screen.name === 'duel' && (
+        <DuelScreen
+          songId={screen.songId}
+          difficulty={screen.difficulty}
+          enemyId={screen.enemyId}
+          onExit={goDuelSelect}
         />
       )}
 

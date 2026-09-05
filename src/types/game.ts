@@ -66,4 +66,6 @@ export type ScreenState =
   | { name: 'lobby' }
   | { name: 'room'; client: RoomClient; room: RoomState }
   | { name: 'battle'; client: RoomClient; room: RoomState }
-  | { name: 'battleResults'; client: RoomClient; room: RoomState };
+  | { name: 'battleResults'; client: RoomClient; room: RoomState }
+  | { name: 'duelSelect' }
+  | { name: 'duel'; songId: string; difficulty: Difficulty; enemyId: string };

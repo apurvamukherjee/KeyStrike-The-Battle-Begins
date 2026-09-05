@@ -5,6 +5,11 @@ import type { Judgement, JudgementCounts } from '../types/game';
 export const GOOD_GRACE = 0.5;
 const LENGTH_BONUS_PER_LETTER = 5;
 
+/** +0.5x every 15 combo, capped at 4x — shared with engine/cpuOpponent.ts, which simulates a combo the same way without a real WordRunner behind it. */
+export function comboMultiplier(combo: number): number {
+  return Math.min(4, 1 + Math.floor(combo / 15) * 0.5);
+}
+
 export type KeyResult =
   | { type: 'ignored' }
   | { type: 'progress' }
@@ -65,7 +70,7 @@ export class WordRunner {
   }
 
   multiplier(): number {
-    return Math.min(4, 1 + Math.floor(this.combo / 15) * 0.5);
+    return comboMultiplier(this.combo);
   }
 
   /** Adds bonus points outside normal word judging — e.g. a Beat Challenge on-beat bonus. */

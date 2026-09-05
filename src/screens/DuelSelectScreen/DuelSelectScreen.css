@@ -1,0 +1,19 @@
+.duel-select__preview {
+  display: flex;
+  justify-content: center;
+  height: 6rem;
+  align-items: flex-end;
+}
+
+.duel-select__portrait--locked {
+  filter: grayscale(1) brightness(0.4);
+}
+
+.duel-select__item--locked {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.duel-select__item--locked:hover {
+  border-color: var(--line);
+}

@@ -24,4 +24,8 @@
 .swordsman__sword-swing {
   transform-box: fill-box;
   transform-origin: 0 0;
+  /* A sensible guard-stance default for a standalone/unanimated preview (e.g.
+     a roster picker) — harmless once GSAP takes over inside DuelArena, since
+     its own setup pass sets this exact same resting angle. */
+  transform: rotate(-34deg);
 }
