@@ -9,6 +9,12 @@
      drop-shadow feedback transition above. */
 }
 
+/* Grid-tile size for roster/loadout pickers (Customize screen) — same figure, just smaller. */
+.swordsman--thumb {
+  width: 64px;
+  height: 92px;
+}
+
 .swordsman__eye-glow {
   filter: drop-shadow(0 0 4px var(--glow, #fff));
 }
@@ -40,7 +46,7 @@
 }
 
 .swordsman__blade-glow {
-  filter: drop-shadow(0 0 6px rgba(243, 240, 228, 0.55));
+  filter: drop-shadow(0 0 6px var(--sword-glow, rgba(243, 240, 228, 0.55)));
 }
 
 .swordsman__sword-anchor {

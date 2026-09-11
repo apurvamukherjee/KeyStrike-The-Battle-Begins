@@ -1,3 +1,26 @@
+.cap--open {
+  border-color: var(--red-500);
+  color: var(--ink-bright);
+}
+
+.home__caret {
+  font-size: 0.7em;
+  color: var(--ink-faint);
+}
+
+.home__flyout {
+  width: min(20rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: screen-in 160ms ease both;
+}
+
+.home__flyout-item {
+  width: 100%;
+  justify-content: center;
+}
+
 .home__hint {
   text-align: center;
 }

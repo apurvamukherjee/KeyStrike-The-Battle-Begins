@@ -61,6 +61,42 @@ export const ENEMIES: Enemy[] = [
     profile: { wordsPerMinute: 47, accuracy: 0.93 },
     flavor: 'Horned, merciless, and very fast.',
   },
+  {
+    id: 'frost-empress',
+    name: 'Frost Empress',
+    tier: 'yokai',
+    rank: 6,
+    swordsmanIndex: 5,
+    profile: { wordsPerMinute: 52, accuracy: 0.94 },
+    flavor: 'Every duel with her ends the same way: quietly, and fast.',
+  },
+  {
+    id: 'iron-monk',
+    name: 'Iron Monk',
+    tier: 'samurai',
+    rank: 7,
+    swordsmanIndex: 1,
+    profile: { wordsPerMinute: 56, accuracy: 0.95 },
+    flavor: 'A lifetime of drills, condensed into a single unbroken form.',
+  },
+  {
+    id: 'thousand-cut-yuki',
+    name: 'Thousand-Cut Yuki',
+    tier: 'yokai',
+    rank: 8,
+    swordsmanIndex: 7,
+    profile: { wordsPerMinute: 61, accuracy: 0.96 },
+    flavor: "Legend says she's never needed a second strike.",
+  },
+  {
+    id: 'the-last-shogun',
+    name: 'The Last Shogun',
+    tier: 'samurai',
+    rank: 9,
+    swordsmanIndex: 0,
+    profile: { wordsPerMinute: 66, accuracy: 0.97 },
+    flavor: 'The ladder ends here — assuming you can end it first.',
+  },
 ];
 
 export function getEnemyById(id: string): Enemy | undefined {

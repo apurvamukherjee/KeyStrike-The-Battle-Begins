@@ -52,6 +52,27 @@ export interface SentenceRunResult {
   grade: string;
 }
 
+export interface ParagraphRunResult {
+  difficulty: Difficulty;
+  charactersTyped: number;
+  errors: number;
+  accuracy: number;
+  wpm: number;
+  maxCombo: number;
+  score: number;
+  grade: string;
+  isNewBest: boolean;
+}
+
+export interface EndlessRunResult {
+  /** Starting difficulty — sets the initial pace, not a fixed track. */
+  difficulty: Difficulty;
+  score: number;
+  wordsCleared: number;
+  maxCombo: number;
+  isNewBest: boolean;
+}
+
 export type ScreenState =
   | { name: 'loader' }
   | { name: 'home' }
@@ -63,6 +84,11 @@ export type ScreenState =
   | { name: 'results'; result: RunResult }
   | { name: 'sentence'; retry?: { difficulty: Difficulty; beatChallenge: boolean } }
   | { name: 'sentenceResults'; result: SentenceRunResult }
+  | { name: 'paragraph'; retry?: { difficulty: Difficulty } }
+  | { name: 'paragraphResults'; result: ParagraphRunResult }
+  | { name: 'endless'; retry?: { difficulty: Difficulty } }
+  | { name: 'endlessResults'; result: EndlessRunResult }
+  | { name: 'customize' }
   /** presetMode: set when arriving via "Duel a friend online" from the Duel Ladder, so a freshly created room auto-selects Duel mode instead of the default racing one. */
   | { name: 'lobby'; presetMode?: 'duel' }
   | { name: 'room'; client: RoomClient; room: RoomState }

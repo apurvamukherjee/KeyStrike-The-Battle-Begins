@@ -1,23 +1,76 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import './HomeScreen.css';
 
 interface HomeScreenProps {
   onPlay: () => void;
   onSentences: () => void;
-  onSettings: () => void;
-  onStats: () => void;
+  onParagraph: () => void;
+  onEndless: () => void;
   onBattle: () => void;
   onDuel: () => void;
+  onStats: () => void;
+  onCustomize: () => void;
+  onSettings: () => void;
 }
 
-export default function HomeScreen({ onPlay, onSentences, onSettings, onStats, onBattle, onDuel }: HomeScreenProps) {
+type Group = 'play' | 'versus' | 'profile';
+
+interface GroupItem {
+  label: string;
+  onSelect: () => void;
+}
+
+export default function HomeScreen({
+  onPlay,
+  onSentences,
+  onParagraph,
+  onEndless,
+  onBattle,
+  onDuel,
+  onStats,
+  onCustomize,
+  onSettings,
+}: HomeScreenProps) {
+  const [openGroup, setOpenGroup] = useState<Group | null>(null);
+
+  const groups: Record<Group, { label: string; items: GroupItem[] }> = {
+    play: {
+      label: 'Play',
+      items: [
+        { label: 'Free Play', onSelect: onPlay },
+        { label: 'Sentences', onSelect: onSentences },
+        { label: 'Paragraph', onSelect: onParagraph },
+        { label: 'Endless', onSelect: onEndless },
+      ],
+    },
+    versus: {
+      label: 'Versus',
+      items: [
+        { label: 'Battle', onSelect: onBattle },
+        { label: 'Duel', onSelect: onDuel },
+      ],
+    },
+    profile: {
+      label: 'Profile',
+      items: [
+        { label: 'Stats', onSelect: onStats },
+        { label: 'Customize', onSelect: onCustomize },
+        { label: 'Settings', onSelect: onSettings },
+      ],
+    },
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.code === 'Enter' || e.code === 'NumpadEnter') onPlay();
+      if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+        if (!openGroup) onPlay();
+      } else if (e.code === 'Escape') {
+        setOpenGroup(null);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onPlay]);
+  }, [onPlay, openGroup]);
 
   return (
     <div className="screen">
@@ -27,25 +80,29 @@ export default function HomeScreen({ onPlay, onSentences, onSettings, onStats, o
       <p className="tagline">Type to the beat. Beat the clock.</p>
 
       <div className="cap-row">
-        <button type="button" className="cap cap--primary" onClick={onPlay} autoFocus>
-          Play
-        </button>
-        <button type="button" className="cap" onClick={onSentences}>
-          Sentences
-        </button>
-        <button type="button" className="cap" onClick={onBattle}>
-          Battle
-        </button>
-        <button type="button" className="cap" onClick={onDuel}>
-          Duel
-        </button>
-        <button type="button" className="cap" onClick={onStats}>
-          Stats
-        </button>
-        <button type="button" className="cap" onClick={onSettings}>
-          Settings
-        </button>
+        {(Object.keys(groups) as Group[]).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`cap${key === 'play' ? ' cap--primary' : ''}${openGroup === key ? ' cap--open' : ''}`}
+            aria-expanded={openGroup === key}
+            autoFocus={key === 'play'}
+            onClick={() => setOpenGroup((g) => (g === key ? null : key))}
+          >
+            {groups[key].label} <span className="home__caret" aria-hidden="true">{openGroup === key ? '▴' : '▾'}</span>
+          </button>
+        ))}
       </div>
+
+      {openGroup && (
+        <div className="panel home__flyout" role="menu" aria-label={groups[openGroup].label}>
+          {groups[openGroup].items.map((item) => (
+            <button key={item.label} type="button" role="menuitem" className="cap home__flyout-item" onClick={item.onSelect}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="panel home__hint">
         <h2 className="home__hint-title">How to play</h2>

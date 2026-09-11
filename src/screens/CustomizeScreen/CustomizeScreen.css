@@ -1,0 +1,108 @@
+.customize__preview {
+  display: flex;
+  justify-content: center;
+}
+
+.customize__panel {
+  width: min(34rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.customize__name-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.customize__name-input {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-inset);
+  color: var(--ink-bright);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+
+.customize__name-input:focus-visible {
+  border-color: var(--red-500);
+}
+
+.customize__section-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--red-400);
+}
+
+.customize__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.customize__tile {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  border: 2px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.4rem;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.customize__tile:hover,
+.customize__tile:focus-visible {
+  border-color: var(--red-500);
+}
+
+.customize__tile--selected {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+}
+
+.customize__tile--locked {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.customize__tile--locked:hover,
+.customize__tile--locked:focus-visible {
+  border-color: var(--line-strong);
+}
+
+.customize__sword-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  margin: 26px 0 26px;
+}
+
+.customize__tile-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-align: center;
+}
+
+.customize__tile-meta {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}

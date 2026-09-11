@@ -37,11 +37,15 @@ export interface SwordsmanProps {
   /** The blade's rotating group, already pivoted at the hilt (0,0 in its own local space) — DuelArena swings this on a strike. */
   swordRef?: Ref<SVGGElement>;
   className?: string;
+  /** Optional cosmetic sword skin (src/data/swords.ts) overriding the blade's fill/glow — falls back to the classic cream blade when omitted. */
+  swordSkin?: { blade: string; glow: string };
 }
 
-export default function Swordsman({ index, bodyRef, swordRef, className }: SwordsmanProps) {
+export default function Swordsman({ index, bodyRef, swordRef, className, swordSkin }: SwordsmanProps) {
   const r = RECIPES[((index % RECIPES.length) + RECIPES.length) % RECIPES.length];
   const glowStyle = { '--glow': r.glow } as CSSProperties;
+  const bladeColor = swordSkin?.blade ?? '#f3f0e4';
+  const bladeGlowStyle = { '--sword-glow': swordSkin?.glow ?? 'rgba(243, 240, 228, 0.55)' } as CSSProperties;
 
   return (
     <svg
@@ -67,7 +71,16 @@ export default function Swordsman({ index, bodyRef, swordRef, className }: Sword
         <g ref={swordRef} className="swordsman__sword-swing">
           <rect x="0" y="0" width="7" height="34" rx="2" fill="#3a3448" />
           <rect x="-4" y="30" width="15" height="5" rx="1.5" fill={r.glow} />
-          <rect x="1.5" y="34" width="4" height="78" rx="2" fill="#f3f0e4" className="swordsman__blade-glow" />
+          <rect
+            x="1.5"
+            y="34"
+            width="4"
+            height="78"
+            rx="2"
+            fill={bladeColor}
+            className="swordsman__blade-glow"
+            style={bladeGlowStyle}
+          />
         </g>
       </g>
     </svg>

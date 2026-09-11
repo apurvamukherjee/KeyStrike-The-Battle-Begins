@@ -9,6 +9,11 @@ import StatsScreen from './screens/StatsScreen/StatsScreen';
 import PracticeScreen from './screens/PracticeScreen/PracticeScreen';
 import SentenceScreen from './screens/SentenceScreen/SentenceScreen';
 import SentenceResultsScreen from './screens/SentenceScreen/SentenceResultsScreen';
+import ParagraphScreen from './screens/ParagraphScreen/ParagraphScreen';
+import ParagraphResultsScreen from './screens/ParagraphScreen/ParagraphResultsScreen';
+import EndlessScreen from './screens/EndlessScreen/EndlessScreen';
+import EndlessResultsScreen from './screens/EndlessScreen/EndlessResultsScreen';
+import CustomizeScreen from './screens/CustomizeScreen/CustomizeScreen';
 import LobbyScreen from './screens/LobbyScreen/LobbyScreen';
 import RoomScreen from './screens/RoomScreen/RoomScreen';
 import BattleScreen from './screens/BattleScreen/BattleScreen';
@@ -16,7 +21,7 @@ import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScre
 import DuelSelectScreen from './screens/DuelSelectScreen/DuelSelectScreen';
 import DuelScreen from './screens/DuelScreen/DuelScreen';
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
-import type { RunResult, ScreenState, SentenceRunResult } from './types/game';
+import type { EndlessRunResult, ParagraphRunResult, RunResult, ScreenState, SentenceRunResult } from './types/game';
 import type { Difficulty } from './types/song';
 import { RoomClient } from './multiplayer/RoomClient';
 import { clearPendingSession, loadPendingSession } from './multiplayer/session';
@@ -46,6 +51,11 @@ type Action =
   | { type: 'FINISH_SONG'; result: RunResult }
   | { type: 'GO_SENTENCE'; retry?: { difficulty: Difficulty; beatChallenge: boolean } }
   | { type: 'FINISH_SENTENCE'; result: SentenceRunResult }
+  | { type: 'GO_PARAGRAPH'; retry?: { difficulty: Difficulty } }
+  | { type: 'FINISH_PARAGRAPH'; result: ParagraphRunResult }
+  | { type: 'GO_ENDLESS'; retry?: { difficulty: Difficulty } }
+  | { type: 'FINISH_ENDLESS'; result: EndlessRunResult }
+  | { type: 'GO_CUSTOMIZE' }
   | { type: 'ENTER_ROOM'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE_RESULTS'; client: RoomClient; room: RoomState };
@@ -88,6 +98,16 @@ function reducer(state: ScreenState, action: Action): ScreenState {
       return { name: 'sentence', retry: action.retry };
     case 'FINISH_SENTENCE':
       return { name: 'sentenceResults', result: action.result };
+    case 'GO_PARAGRAPH':
+      return { name: 'paragraph', retry: action.retry };
+    case 'FINISH_PARAGRAPH':
+      return { name: 'paragraphResults', result: action.result };
+    case 'GO_ENDLESS':
+      return { name: 'endless', retry: action.retry };
+    case 'FINISH_ENDLESS':
+      return { name: 'endlessResults', result: action.result };
+    case 'GO_CUSTOMIZE':
+      return { name: 'customize' };
     case 'ENTER_ROOM':
       return { name: 'room', client: action.client, room: action.room };
     case 'ENTER_BATTLE':
@@ -104,6 +124,9 @@ export default function App() {
   const goHome = useCallback(() => dispatch({ type: 'GO_HOME' }), []);
   const goSongSelect = useCallback(() => dispatch({ type: 'GO_SONG_SELECT' }), []);
   const goSentence = useCallback(() => dispatch({ type: 'GO_SENTENCE' }), []);
+  const goParagraph = useCallback(() => dispatch({ type: 'GO_PARAGRAPH' }), []);
+  const goEndless = useCallback(() => dispatch({ type: 'GO_ENDLESS' }), []);
+  const goCustomize = useCallback(() => dispatch({ type: 'GO_CUSTOMIZE' }), []);
   const goLobby = useCallback(() => dispatch({ type: 'GO_LOBBY' }), []);
   const goDuelOnline = useCallback(() => dispatch({ type: 'GO_LOBBY', presetMode: 'duel' }), []);
   const goDuelSelect = useCallback(() => dispatch({ type: 'GO_DUEL_SELECT' }), []);
@@ -151,6 +174,7 @@ export default function App() {
       case 'stats':
       case 'lobby':
       case 'duelSelect':
+      case 'customize':
         backHandlerRef.current = goHome;
         break;
       case 'playing':
@@ -163,6 +187,10 @@ export default function App() {
         break;
       case 'sentence':
       case 'sentenceResults':
+      case 'paragraph':
+      case 'paragraphResults':
+      case 'endless':
+      case 'endlessResults':
         backHandlerRef.current = goHome;
         break;
       case 'room':
@@ -210,12 +238,17 @@ export default function App() {
         <HomeScreen
           onPlay={goSongSelect}
           onSentences={goSentence}
+          onParagraph={goParagraph}
+          onEndless={goEndless}
           onSettings={() => dispatch({ type: 'GO_SETTINGS' })}
           onStats={() => dispatch({ type: 'GO_STATS' })}
+          onCustomize={goCustomize}
           onBattle={goLobby}
           onDuel={goDuelSelect}
         />
       )}
+
+      {screen.name === 'customize' && <CustomizeScreen onBack={goHome} />}
 
       {screen.name === 'duelSelect' && (
         <DuelSelectScreen
@@ -330,6 +363,40 @@ export default function App() {
               retry: { difficulty: screen.result.difficulty, beatChallenge: screen.result.beatChallenge },
             })
           }
+          onHome={goHome}
+        />
+      )}
+
+      {screen.name === 'paragraph' && (
+        <ParagraphScreen
+          initialDifficulty={screen.retry?.difficulty}
+          autoStart={!!screen.retry}
+          onFinish={(result) => dispatch({ type: 'FINISH_PARAGRAPH', result })}
+          onExit={goHome}
+        />
+      )}
+
+      {screen.name === 'paragraphResults' && (
+        <ParagraphResultsScreen
+          result={screen.result}
+          onRetry={() => dispatch({ type: 'GO_PARAGRAPH', retry: { difficulty: screen.result.difficulty } })}
+          onHome={goHome}
+        />
+      )}
+
+      {screen.name === 'endless' && (
+        <EndlessScreen
+          initialDifficulty={screen.retry?.difficulty}
+          autoStart={!!screen.retry}
+          onFinish={(result) => dispatch({ type: 'FINISH_ENDLESS', result })}
+          onExit={goHome}
+        />
+      )}
+
+      {screen.name === 'endlessResults' && (
+        <EndlessResultsScreen
+          result={screen.result}
+          onRetry={() => dispatch({ type: 'GO_ENDLESS', retry: { difficulty: screen.result.difficulty } })}
           onHome={goHome}
         />
       )}

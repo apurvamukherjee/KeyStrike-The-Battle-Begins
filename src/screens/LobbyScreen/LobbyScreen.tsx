@@ -3,6 +3,7 @@ import { RoomClient } from '../../multiplayer/RoomClient';
 import { getOrCreateClientId, savePendingSession } from '../../multiplayer/session';
 import type { RoomState } from '../../multiplayer/types';
 import { sanitizeNickname } from '../../utils/nickname';
+import { getProfile } from '../../utils/profile';
 import './LobbyScreen.css';
 
 interface LobbyScreenProps {
@@ -13,7 +14,7 @@ interface LobbyScreenProps {
 }
 
 export default function LobbyScreen({ presetMode, onEnterRoom, onBack }: LobbyScreenProps) {
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState(() => getProfile().name);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
