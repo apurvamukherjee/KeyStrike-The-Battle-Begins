@@ -22,6 +22,9 @@ const RECIPES: SwordsmanRecipe[] = [
   { body: '#22160f', shade: '#2c1e15', face: '#33251a', hair: '#180f0a', glow: '#ffb64d', sash: '#e0951a' }, // amber
   { body: '#1c1018', shade: '#26161f', face: '#2e1a26', hair: '#140b12', glow: '#ff6b9d', sash: '#d94f7c' }, // sakura
   { body: '#10161c', shade: '#182028', face: '#1e2830', hair: '#0c1216', glow: '#8ecae6', sash: '#5fa8d3' }, // steel-blue
+  // Prestige recipe (index 8) — reserved for Story Mode's campaign-completion
+  // reward, so it never shows up on a CPU opponent or an ordinary unlock.
+  { body: '#141414', shade: '#1e1e1e', face: '#242424', hair: '#0a0a0a', glow: '#ffffff', sash: '#d8d8d8' }, // sword-saint
 ];
 
 export interface SwordsmanProps {

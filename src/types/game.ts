@@ -89,6 +89,16 @@ export type ScreenState =
   | { name: 'endless'; retry?: { difficulty: Difficulty } }
   | { name: 'endlessResults'; result: EndlessRunResult }
   | { name: 'customize' }
+  | { name: 'storyLadder' }
+  | {
+      name: 'story';
+      level: number;
+      songId: string;
+      /** Always 'normal' — Story's own difficulty is the level curve, not the song chart. */
+      difficulty: Difficulty;
+      attempt: number;
+      matchScore: { you: number; enemy: number };
+    }
   /** presetMode: set when arriving via "Duel a friend online" from the Duel Ladder, so a freshly created room auto-selects Duel mode instead of the default racing one. */
   | { name: 'lobby'; presetMode?: 'duel' }
   | { name: 'room'; client: RoomClient; room: RoomState }

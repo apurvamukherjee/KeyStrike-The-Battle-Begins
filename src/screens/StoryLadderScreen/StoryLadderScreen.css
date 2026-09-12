@@ -1,0 +1,129 @@
+.story-ladder__preview {
+  display: flex;
+  justify-content: center;
+  height: 13.5rem;
+  align-items: flex-end;
+}
+
+.story-ladder__portrait--locked {
+  filter: grayscale(1) brightness(0.4);
+}
+
+.story-ladder__info {
+  width: min(28rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.story-ladder__level-number {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.story-ladder__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-bright);
+}
+
+.story-ladder__kind {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+}
+
+.story-ladder__kind--miniboss {
+  color: var(--red-400);
+  border-color: var(--red-600);
+}
+
+.story-ladder__kind--boss {
+  color: var(--ink-bright);
+  background: var(--red-wash);
+  border-color: var(--red-500);
+}
+
+.story-ladder__flavor {
+  margin: 0.25rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.story-ladder__grid {
+  width: min(40rem, 100%);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.4rem;
+}
+
+@media (max-width: 640px) {
+  .story-ladder__grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.story-ladder__tile {
+  appearance: none;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.story-ladder__tile:hover {
+  border-color: var(--red-500);
+  color: var(--ink-bright);
+}
+
+.story-ladder__tile--selected {
+  border-color: var(--red-500);
+  background: var(--red-wash);
+  color: var(--ink-bright);
+}
+
+.story-ladder__tile--miniboss {
+  border-color: var(--red-600);
+}
+
+.story-ladder__tile--boss {
+  border-color: var(--red-500);
+  box-shadow: 0 0 10px var(--red-glow);
+}
+
+.story-ladder__tile--cleared {
+  color: var(--ink-bright);
+}
+
+.story-ladder__tile--locked {
+  opacity: 0.4;
+  cursor: default;
+  font-size: 0.7rem;
+}
+
+.story-ladder__tile--locked:hover {
+  border-color: var(--line-strong);
+  color: var(--ink-dim);
+}

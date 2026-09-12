@@ -216,23 +216,59 @@ Consolidated into 3 big phases (each bundles items that share
 dependencies or infrastructure) plus a closing optimization phase — see
 ROADMAP.md for the short version.
 
-### Phase 3 — Foundation & Solo Depth (Large)
+### Phase 3 — Foundation & Solo Depth (Large) — ✅ shipped
 
-Everything solo, no new backend — the systems Phases 4 and 5 build on.
+Everything solo, no new backend — the systems Phase 4 builds on.
 
 - Profile & Loadout (§2): `profile.ts`, `characters.ts`, `swords.ts`, Customize screen, `Swordsman` sword-skin prop.
-- Menu regroup (§1): Play ▾ / Versus ▾ / Profile ▾ + Story Mode hero CTA (IA only — Story itself ships in Phase 4).
-- Paragraph Mode, solo (§4): `paragraphRunner.ts` + tests, `paragraphs.ts`, `ParagraphScreen`, local high scores.
-- Duel ladder expansion (§5): +3-5 enemies at the top of `enemies.ts`.
-- Endless/Survival Mode (§7): `EndlessScreen`, reuses `chartEngine` unchanged.
+- Menu regroup (§1): Play ▾ / Versus ▾ / Profile ▾.
+- Paragraph Mode, solo (§4): reuses `SentenceRunner`/`SentenceStage` (no fog) rather than a new engine module — see the note below.
+- Duel ladder expansion (§5): 9 enemies total (was 5).
+- Endless/Survival Mode (§7): `EndlessScreen` + a small new `endlessRunner.ts`, both reusing `chartEngine`'s scoring conventions.
 
-### Phase 4 — The Campaign (Large)
+One deviation from the original design: Paragraph Mode does **not** have
+its own `paragraphRunner.ts`. `SentenceRunner`'s char-matching logic is
+identical to what a paragraph needs — the only real difference is the UI
+(no fog-of-war reveal) — so `ParagraphScreen` reuses it directly with an
+effectively-infinite reveal window, rather than duplicating ~60 lines of
+tested engine code for no behavioral gain.
 
-Depends on Phase 3 (needs the loadout system to unlock into, and the
-paragraph engine for levels 36-50).
+### Phase 4a — Story Mode (Large) — ✅ shipped
 
-- Story Mode (§3): `storyLevels.ts` (50 levels, 10 named boss encounters), `storyProgress.ts`, `StoryLadderScreen`, `StoryFightScreen`, unlock wiring into Phase 3's Profile.
-- In-browser Song Editor (§8): `SongEditorScreen`, URL-shareable chart encoding, integration into `SongSelectScreen`.
+Depended on Phase 3 (needed the loadout system to unlock into). Verified
+end-to-end in a real browser: level progression, loss-then-retry, and both
+milestone rewards.
+
+- Story Mode (§3): `storyLevels.ts` (50 levels; 10 named boss/miniboss milestones every 5th level, reusing the Duel ladder's 9 enemies for levels 5-45 and one new campaign-exclusive final boss at 50), `storyProgress.ts` (progress + reward-claim tracking), `StoryLadderScreen` (a 50-tile grid, not a list — see note below), unlock wiring into Phase 3's Profile via a `storyReward` flag on `Character`/`Sword` rather than folding into the numeric fighting-level count.
+- `Story Mode` hero CTA added to Home, above the three flyout groups.
+
+Two deviations from the original design, both to avoid building gameplay
+that doesn't exist anywhere else in the codebase yet:
+
+- **No `StoryFightScreen`.** `DuelScreen` was generalized instead — it now
+  takes an `opponent: DuelOpponent` prop (and an `onWin` callback) rather
+  than looking up `enemyId` in the Duel ladder internally, so both Duel and
+  Story fights share the exact same, already-battle-tested combat code with
+  zero duplication. A `winsNeeded` prop (default 2, Story passes 1) and a
+  `continueLabelOnWin` prop ("Next Level") were the only additions needed.
+- **Every level is a word-mode CPU duel**, not a mix of words/sentences/
+  paragraph per the original `contentMode` field. A sentence- or paragraph-
+  based CPU race doesn't exist anywhere in the app (Sentence/Paragraph
+  modes are solo-only) — building three combat variants for a first cut
+  would have been the exact kind of half-finished stretch worth avoiding.
+  `contentMode` was dropped from `StoryLevel` accordingly.
+
+A subtle bug worth flagging for anyone touching this code later:
+`DuelScreen`'s `onRematch` always calls `onAdvance` with a fresh
+`{you:0,enemy:0}` — it does **not** carry the outcome of the fight just
+decided. Story's "next level vs. retry" logic can't read that from
+`onAdvance`'s argument; it has to capture the outcome from `onWin` (which
+only ever fires on a win) into a ref first. See the `storyWonRef` comment
+in `App.tsx`.
+
+### Phase 4b — Song Editor (Medium-large) — not started
+
+- In-browser Song Editor (§8): `SongEditorScreen`, URL-shareable chart encoding, integration into `SongSelectScreen`. Deliberately split from 4a so Story Mode didn't wait on it — the two share no code.
 
 ### Phase 5 — Connected & Competitive (Large, new infra)
 
@@ -253,9 +289,9 @@ surface to work with.
 - UX rough edges: loading/empty/error states, mobile/touch parity for the new screens (Story ladder, Paragraph, Customize), keyboard-nav completeness for the new flyout menus.
 - Accessibility pass: colorblind palette (`[data-palette='alt']`) and reduce-motion coverage extended to every new screen, not just the ones that existed before this expansion.
 
-Suggested order: **3 → 4 → 5 → 6.** Phase 3 unlocks both 4 and 5; Phase 6
-runs last on purpose, once there's a full surface to profile and fix rather
-than polishing a moving target.
+Suggested order: **4b → 5 → 6** (3 and 4a are done). Phase 6 runs last on
+purpose, once there's a full surface to profile and fix rather than
+polishing a moving target.
 
 ## Open questions for you
 

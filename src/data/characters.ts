@@ -3,8 +3,13 @@ export interface Character {
   name: string;
   /** Picks a Swordsman color recipe (src/components/Swordsman) for this character's look. */
   swordsmanIndex: number;
-  /** Fighting level (distinct Duel enemies defeated — see utils/loadoutProgress) needed to unlock. 0 is free from the start. */
+  /**
+   * Fighting level (distinct Duel enemies defeated — see utils/loadoutProgress) needed to unlock. 0 is
+   * free from the start. `Infinity` means it's never unlocked this way — see `storyReward` instead.
+   */
   unlockLevel: number;
+  /** Story Mode level whose clear grants this character, independent of `unlockLevel` — see utils/storyProgress. */
+  storyReward?: true;
 }
 
 // One character per existing Swordsman recipe — the first three are free so
@@ -19,6 +24,8 @@ export const CHARACTERS: Character[] = [
   { id: 'amber-warden', name: 'Amber Warden', swordsmanIndex: 5, unlockLevel: 4 },
   { id: 'sakura-reaper', name: 'Sakura Reaper', swordsmanIndex: 6, unlockLevel: 6 },
   { id: 'steel-oni', name: 'Steel Oni', swordsmanIndex: 7, unlockLevel: 8 },
+  // Prestige recipe (index 8) — granted only by clearing Story Mode level 50, never by fighting level.
+  { id: 'sword-saint', name: 'Sword Saint', swordsmanIndex: 8, unlockLevel: Infinity, storyReward: true },
 ];
 
 export function getCharacterById(id: string): Character | undefined {

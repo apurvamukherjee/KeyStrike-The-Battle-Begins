@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './HomeScreen.css';
 
 interface HomeScreenProps {
+  onStory: () => void;
   onPlay: () => void;
   onSentences: () => void;
   onParagraph: () => void;
@@ -21,6 +22,7 @@ interface GroupItem {
 }
 
 export default function HomeScreen({
+  onStory,
   onPlay,
   onSentences,
   onParagraph,
@@ -63,14 +65,14 @@ export default function HomeScreen({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === 'Enter' || e.code === 'NumpadEnter') {
-        if (!openGroup) onPlay();
+        if (!openGroup) onStory();
       } else if (e.code === 'Escape') {
         setOpenGroup(null);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onPlay, openGroup]);
+  }, [onStory, openGroup]);
 
   return (
     <div className="screen">
@@ -79,14 +81,19 @@ export default function HomeScreen({
       </h1>
       <p className="tagline">Type to the beat. Beat the clock.</p>
 
+      <button type="button" className="home__story-cta" autoFocus onClick={onStory}>
+        <span className="home__story-cta-blade" aria-hidden="true" />
+        Story Mode
+        <span className="home__story-cta-blade home__story-cta-blade--right" aria-hidden="true" />
+      </button>
+
       <div className="cap-row">
         {(Object.keys(groups) as Group[]).map((key) => (
           <button
             key={key}
             type="button"
-            className={`cap${key === 'play' ? ' cap--primary' : ''}${openGroup === key ? ' cap--open' : ''}`}
+            className={`cap${openGroup === key ? ' cap--open' : ''}`}
             aria-expanded={openGroup === key}
-            autoFocus={key === 'play'}
             onClick={() => setOpenGroup((g) => (g === key ? null : key))}
           >
             {groups[key].label} <span className="home__caret" aria-hidden="true">{openGroup === key ? '▴' : '▾'}</span>

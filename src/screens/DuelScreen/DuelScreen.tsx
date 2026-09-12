@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSongById } from '../../data/songs';
-import { getEnemyById } from '../../data/enemies';
 import { getAudioContext, playChime, scheduleSong } from '../../engine/audioEngine';
 import { WordRunner } from '../../engine/chartEngine';
 import { applyIntensity } from '../../engine/musicIntensity';
 import { advanceCarProgress } from '../../engine/raceProgress';
-import { initCpuState, stepCpu, type CpuState } from '../../engine/cpuOpponent';
+import { initCpuState, stepCpu, type CpuProfile, type CpuState } from '../../engine/cpuOpponent';
 import type { Judgement } from '../../types/game';
 import type { Difficulty } from '../../types/song';
 import { recordRun, recordKeyStats, type KeyStat } from '../../utils/stats';
-import { recordDuelWin } from '../../utils/duelProgress';
 import { formatScore } from '../../utils/format';
 import { attachMobileTypingInput, IS_TOUCH } from '../../utils/mobileTyping';
 import { getInputOffsetMs, getVolume } from '../../utils/settings';
@@ -30,15 +28,29 @@ interface MatchScore {
   enemy: number;
 }
 
+/** A CPU fighter this screen can run against — sourced from either the Duel ladder (data/enemies.ts) or a Story Mode level (data/storyLevels.ts), so this screen stays agnostic to which. */
+export interface DuelOpponent {
+  id: string;
+  name: string;
+  swordsmanIndex: number;
+  profile: CpuProfile;
+}
+
 interface DuelScreenProps {
   songId: string;
   difficulty: Difficulty;
-  enemyId: string;
-  /** Round wins so far this best-of-3 match — {you:0,enemy:0} for a fresh fight from the ladder. */
+  opponent: DuelOpponent;
+  /** Round wins so far this match — {you:0,enemy:0} for a fresh fight. */
   matchScore: MatchScore;
+  /** Wins needed to take the whole match. Duel's best-of-3 ladder passes 2 (the default); Story Mode's one-fight-per-level passes 1. */
+  winsNeeded?: number;
+  /** Overrides the "Rematch" button's label once the match is won (e.g. Story Mode's "Next Level") — a loss always shows "Rematch" regardless. */
+  continueLabelOnWin?: string;
   onExit: () => void;
   /** Starts the next attempt (either the next round of this match, or a fresh 0-0 rematch) with the given score. */
   onAdvance: (matchScore: MatchScore) => void;
+  /** Called once the whole match is won — records progress in whichever store the caller's mode uses. */
+  onWin: (opponentId: string) => void;
 }
 
 interface ResultStats {
@@ -46,9 +58,6 @@ interface ResultStats {
   accuracy: number;
   maxCombo: number;
 }
-
-/** Best of 3 — first to 2 round wins takes the match and the ladder rank. */
-const WINS_NEEDED = 2;
 
 interface HudState {
   score: number;
@@ -81,8 +90,17 @@ const INITIAL_HUD: HudState = {
 };
 const INITIAL_STAGE: StageState = { word: '', typed: 0, fractionRemaining: 1, overtime: false, upcoming: [] };
 
-export default function DuelScreen({ songId, difficulty, enemyId, matchScore, onExit, onAdvance }: DuelScreenProps) {
-  const enemy = getEnemyById(enemyId);
+export default function DuelScreen({
+  songId,
+  difficulty,
+  opponent,
+  matchScore,
+  winsNeeded = 2,
+  continueLabelOnWin,
+  onExit,
+  onAdvance,
+  onWin,
+}: DuelScreenProps) {
   const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [stage, setStage] = useState<StageState>(INITIAL_STAGE);
   const [paused, setPausedState] = useState(false);
@@ -96,7 +114,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
 
   useEffect(() => {
     // Clears any previous duel's result screen — this effect re-runs on every
-    // Rematch (a fresh songId/enemyId/difficulty), and since DuelScreen itself
+    // Rematch (a fresh songId/opponent/difficulty), and since DuelScreen itself
     // never unmounts between rounds, stale outcome/resultStats would otherwise
     // keep DuelResultsScreen showing right through a freshly-started fight.
     setOutcome(null);
@@ -108,11 +126,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
     // effect re-runs from that tap, same as every round after it.
     if (!mobileStarted) return;
 
-    if (!enemy) {
-      onExit();
-      return;
-    }
-    const activeEnemy = enemy; // narrowed once here — nested closures below (finishDuel, loop, ...) don't otherwise see through the outer `enemy`'s optional type
+    const activeEnemy = opponent;
     const song = getSongById(songId);
     if (!song) {
       onExit();
@@ -162,11 +176,11 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
       fxGain.disconnect();
       teardown();
 
-      // Ladder progress only advances on winning the whole best-of-3 match,
-      // not a single round — matchScore is this screen's OWN props, fixed
-      // for its lifetime, so the round just decided is exactly what tips it.
+      // Progress only advances on winning the whole match, not a single
+      // round — matchScore is this screen's OWN props, fixed for its
+      // lifetime, so the round just decided is exactly what tips it.
       const nextYouWins = matchScore.you + (won ? 1 : 0);
-      if (won && nextYouWins >= WINS_NEEDED) recordDuelWin(activeEnemy.id);
+      if (won && nextYouWins >= winsNeeded) onWin(activeEnemy.id);
 
       const longestCleared = runner.words
         .filter((w) => w.judgement === 'perfect' || w.judgement === 'good')
@@ -365,9 +379,7 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId, difficulty, enemyId, mobileStarted]);
-
-  if (!enemy) return null;
+  }, [songId, difficulty, opponent.id, mobileStarted]);
 
   if (IS_TOUCH && !mobileStarted) {
     return (
@@ -403,20 +415,21 @@ export default function DuelScreen({ songId, difficulty, enemyId, matchScore, on
       you: matchScore.you + (outcome === 'won' ? 1 : 0),
       enemy: matchScore.enemy + (outcome === 'lost' ? 1 : 0),
     };
-    const matchOver = nextScore.you >= WINS_NEEDED || nextScore.enemy >= WINS_NEEDED;
+    const matchOver = nextScore.you >= winsNeeded || nextScore.enemy >= winsNeeded;
     return (
       <DuelResultsScreen
         won={outcome === 'won'}
         youNickname="You"
         youAvatarIndex={0}
-        opponentNickname={enemy.name}
-        opponentAvatarIndex={enemy.swordsmanIndex}
+        opponentNickname={opponent.name}
+        opponentAvatarIndex={opponent.swordsmanIndex}
         youStats={resultStats}
         matchScore={{ you: nextScore.you, opponent: nextScore.enemy }}
-        winsNeeded={WINS_NEEDED}
+        winsNeeded={winsNeeded}
         matchOver={matchOver}
         onNextRound={matchOver ? undefined : () => onAdvance(nextScore)}
         onRematch={matchOver ? () => onAdvance({ you: 0, enemy: 0 }) : undefined}
+        rematchLabel={matchOver && outcome === 'won' ? continueLabelOnWin : undefined}
         onLeave={onExit}
         leaveLabel="Back to the Ladder"
       />

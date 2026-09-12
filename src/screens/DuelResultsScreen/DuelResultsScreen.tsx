@@ -36,6 +36,8 @@ interface DuelResultsScreenProps {
   onNextRound?: () => void;
   /** Omitted in multiplayer for a non-host — only the host can actually restart a shared room, mirroring BattleResultsScreen. Also used to start a fresh match once matchOver. */
   onRematch?: () => void;
+  /** Overrides the "Rematch" button's text without changing its wiring — e.g. Story Mode shows "Next Level" here on a win. */
+  rematchLabel?: string;
   onLeave: () => void;
   leaveLabel?: string;
 }
@@ -53,6 +55,7 @@ export default function DuelResultsScreen({
   matchOver,
   onNextRound,
   onRematch,
+  rematchLabel,
   onLeave,
   leaveLabel,
 }: DuelResultsScreenProps) {
@@ -160,7 +163,7 @@ export default function DuelResultsScreen({
         )}
         {onRematch && (
           <button type="button" className={onNextRound ? 'cap' : 'cap cap--primary'} onClick={onRematch}>
-            Rematch
+            {rematchLabel ?? 'Rematch'}
           </button>
         )}
         <button type="button" className={onNextRound || onRematch ? 'cap' : 'cap cap--primary'} onClick={onLeave}>

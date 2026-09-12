@@ -1,3 +1,47 @@
+.home__story-cta {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 2px solid var(--red-500);
+  background: linear-gradient(180deg, var(--red-wash), rgba(224, 38, 63, 0.04));
+  color: var(--ink-bright);
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.25rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0 22px var(--red-glow);
+  transition:
+    box-shadow 150ms ease,
+    transform 90ms ease;
+}
+
+.home__story-cta:hover,
+.home__story-cta:focus-visible {
+  box-shadow: 0 0 34px var(--red-glow);
+}
+
+.home__story-cta:active {
+  transform: scale(0.98);
+}
+
+/* Two slanted blade-edge accents flanking the label — a sword-slash motif
+   drawn in CSS, not an image, so it stays crisp at any size and follows the
+   theme's palette automatically. */
+.home__story-cta-blade {
+  display: inline-block;
+  width: 3px;
+  height: 1.4rem;
+  background: var(--ink-bright);
+  transform: skewX(-20deg);
+}
+
 .cap--open {
   border-color: var(--red-500);
   color: var(--ink-bright);

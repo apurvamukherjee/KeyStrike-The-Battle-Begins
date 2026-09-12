@@ -13,21 +13,26 @@
 Duel Mode now supports 1v1, 2v2, and FFA, all discoverable from the Duel
 Ladder screen and playable on touch devices.
 
-## Up next
+- **Phase 3 — Foundation & Solo Depth** — Profile/loadout system (name,
+  unlockable characters & swords, `Customize` screen), the Home screen
+  regrouped into `Play ▾` / `Versus ▾` / `Profile ▾` clusters, Paragraph
+  Mode (solo), Duel ladder expansion (9 enemies total), Endless/Survival
+  Mode.
+- **Phase 4a — Story Mode** — the 50-level campaign ("Sword Man Mode"): a
+  smooth grunt difficulty curve plus 10 named boss/miniboss milestones
+  (reusing the Duel ladder's cast for levels 5-45, a new campaign-exclusive
+  final boss at 50), a `Story Mode` hero button on Home, level-by-level
+  progression with retry-on-loss, and two Story-exclusive loadout rewards
+  (a sword at level 25, a character at level 50) layered onto Phase 3's
+  unlock system without disturbing its existing Duel-ladder-based unlocks.
 
-Everything previously planned (the new Story/Paragraph/Profile direction
-*and* the old Endless/Song Editor/Leaderboard/Tournament items) is
-consolidated into 3 big phases, grouped by dependency and infra needs, plus
-a closing polish phase. Nothing from either list was dropped. Full design
-for Phases 3 & 4's new items in [EXPANSION_PLAN.md](EXPANSION_PLAN.md).
+## Up next
 
 | Phase | What | Size |
 |---|---|---|
-| **3 — Foundation & Solo Depth** | Profile/loadout system (name, unlockable characters & swords), menu regroup into Play/Versus/Profile clusters, Paragraph Mode (solo), Duel ladder expansion (+3-5 enemies), Endless/Survival Mode. All solo, no new backend — this is what everything else in Phases 4-5 builds on. | Large |
-| **4 — The Campaign** | Story Mode: 50-level campaign, boss fights every 5 levels, unlock rewards feeding Phase 3's loadout. Plus the in-browser Song Editor (custom word/beat charts, URL-shareable, no backend) as the other big single-player content piece. | Large |
+| **4b — Song Editor** | The other half of Phase 4: an in-browser word/beat chart editor, saved locally and shareable via a URL-encoded link — no backend needed. Deliberately split from 4a so Story Mode didn't wait on it. | Medium-large |
 | **5 — Connected & Competitive** | Paragraph Mode (multiplayer, extends the existing room server), Persistent Global Leaderboard (needs Postgres on Render — the only phase requiring new infra), Tournament Brackets (single-elimination, 4 or 8 entrants, wraps the room/duel/race machinery). Bundled together since all three touch the server and the latter two share the same backend work. | Large (new infra) |
 | **6 — Optimization & Polish** | Performance pass (render/bundle profiling, animation smoothness on lower-end devices), bug-fix sweep across all modes shipped so far, UX rough edges (loading states, error handling, mobile/touch parity), accessibility check. No new features — makes everything above feel finished. | Medium |
 
-Suggested order: 3 → 4 → 5 → 6. Phase 3 is the prerequisite for Phase 4's
-unlock rewards and Phase 5's Paragraph engine reuse; Phase 6 runs last on
-purpose, once there's a full surface to profile and fix.
+Full design in [EXPANSION_PLAN.md](EXPANSION_PLAN.md). Suggested order:
+4b → 5 → 6.

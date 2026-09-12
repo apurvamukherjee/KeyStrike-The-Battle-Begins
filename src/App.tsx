@@ -20,6 +20,7 @@ import BattleScreen from './screens/BattleScreen/BattleScreen';
 import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScreen';
 import DuelSelectScreen from './screens/DuelSelectScreen/DuelSelectScreen';
 import DuelScreen from './screens/DuelScreen/DuelScreen';
+import StoryLadderScreen from './screens/StoryLadderScreen/StoryLadderScreen';
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
 import type { EndlessRunResult, ParagraphRunResult, RunResult, ScreenState, SentenceRunResult } from './types/game';
 import type { Difficulty } from './types/song';
@@ -28,6 +29,10 @@ import { clearPendingSession, loadPendingSession } from './multiplayer/session';
 import type { RoomState } from './multiplayer/types';
 import { applyAppearanceSettings } from './utils/settings';
 import { getGhostReplay } from './utils/ghostReplays';
+import { getEnemyById } from './data/enemies';
+import { recordDuelWin } from './utils/duelProgress';
+import { getStoryLevel, TOTAL_STORY_LEVELS } from './data/storyLevels';
+import { recordStoryLevelClear } from './utils/storyProgress';
 import { songs } from './data/songs';
 
 type Action =
@@ -56,6 +61,8 @@ type Action =
   | { type: 'GO_ENDLESS'; retry?: { difficulty: Difficulty } }
   | { type: 'FINISH_ENDLESS'; result: EndlessRunResult }
   | { type: 'GO_CUSTOMIZE' }
+  | { type: 'GO_STORY_LADDER' }
+  | { type: 'START_STORY'; level: number; songId: string }
   | { type: 'ENTER_ROOM'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE_RESULTS'; client: RoomClient; room: RoomState };
@@ -108,6 +115,20 @@ function reducer(state: ScreenState, action: Action): ScreenState {
       return { name: 'endlessResults', result: action.result };
     case 'GO_CUSTOMIZE':
       return { name: 'customize' };
+    case 'GO_STORY_LADDER':
+      return { name: 'storyLadder' };
+    case 'START_STORY':
+      // Same fresh-attempt-id trick as START_DUEL — Story's own best-of-1
+      // "rematch" (retrying a loss) picks a new random song too, which
+      // wouldn't otherwise change props enough to remount DuelScreen.
+      return {
+        name: 'story',
+        level: action.level,
+        songId: action.songId,
+        difficulty: 'normal',
+        attempt: Date.now(),
+        matchScore: { you: 0, enemy: 0 },
+      };
     case 'ENTER_ROOM':
       return { name: 'room', client: action.client, room: action.room };
     case 'ENTER_BATTLE':
@@ -127,6 +148,11 @@ export default function App() {
   const goParagraph = useCallback(() => dispatch({ type: 'GO_PARAGRAPH' }), []);
   const goEndless = useCallback(() => dispatch({ type: 'GO_ENDLESS' }), []);
   const goCustomize = useCallback(() => dispatch({ type: 'GO_CUSTOMIZE' }), []);
+  const goStoryLadder = useCallback(() => dispatch({ type: 'GO_STORY_LADDER' }), []);
+  // Set by Story's onWin (only fires on an actual match win), read once by
+  // onAdvance to decide "next level" vs "retry" — see the 'story' render
+  // block below for why onAdvance's own argument can't carry this signal.
+  const storyWonRef = useRef(false);
   const goLobby = useCallback(() => dispatch({ type: 'GO_LOBBY' }), []);
   const goDuelOnline = useCallback(() => dispatch({ type: 'GO_LOBBY', presetMode: 'duel' }), []);
   const goDuelSelect = useCallback(() => dispatch({ type: 'GO_DUEL_SELECT' }), []);
@@ -175,6 +201,7 @@ export default function App() {
       case 'lobby':
       case 'duelSelect':
       case 'customize':
+      case 'storyLadder':
         backHandlerRef.current = goHome;
         break;
       case 'playing':
@@ -184,6 +211,9 @@ export default function App() {
         break;
       case 'duel':
         backHandlerRef.current = goDuelSelect;
+        break;
+      case 'story':
+        backHandlerRef.current = goStoryLadder;
         break;
       case 'sentence':
       case 'sentenceResults':
@@ -206,7 +236,7 @@ export default function App() {
       default:
         backHandlerRef.current = goHome;
     }
-  }, [screen, goHome, goSongSelect, goDuelSelect]);
+  }, [screen, goHome, goSongSelect, goDuelSelect, goStoryLadder]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -236,6 +266,7 @@ export default function App() {
 
       {screen.name === 'home' && (
         <HomeScreen
+          onStory={goStoryLadder}
           onPlay={goSongSelect}
           onSentences={goSentence}
           onParagraph={goParagraph}
@@ -250,6 +281,52 @@ export default function App() {
 
       {screen.name === 'customize' && <CustomizeScreen onBack={goHome} />}
 
+      {screen.name === 'storyLadder' && (
+        <StoryLadderScreen
+          onFight={(level, songId) => dispatch({ type: 'START_STORY', level, songId })}
+          onBack={goHome}
+        />
+      )}
+
+      {screen.name === 'story' &&
+        (() => {
+          const storyLevel = getStoryLevel(screen.level);
+          if (!storyLevel) return null;
+          return (
+            <DuelScreen
+              key={screen.attempt}
+              songId={screen.songId}
+              difficulty={screen.difficulty}
+              opponent={{ id: `story-${screen.level}`, name: storyLevel.name, swordsmanIndex: storyLevel.swordsmanIndex, profile: storyLevel.profile }}
+              matchScore={screen.matchScore}
+              winsNeeded={1}
+              continueLabelOnWin={screen.level >= TOTAL_STORY_LEVELS ? undefined : 'Next Level'}
+              onExit={goStoryLadder}
+              onWin={() => {
+                storyWonRef.current = true;
+                recordStoryLevelClear(screen.level);
+              }}
+              onAdvance={() => {
+                // DuelScreen's onRematch always passes a fresh {you:0,enemy:0} —
+                // it doesn't carry the outcome of the fight just decided — so
+                // whether that fight was won comes from onWin having fired
+                // (above), captured here and reset for the next attempt.
+                const won = storyWonRef.current;
+                storyWonRef.current = false;
+                if (won && screen.level >= TOTAL_STORY_LEVELS) {
+                  goStoryLadder();
+                  return;
+                }
+                dispatch({
+                  type: 'START_STORY',
+                  level: won ? screen.level + 1 : screen.level,
+                  songId: songs[Math.floor(Math.random() * songs.length)].id,
+                });
+              }}
+            />
+          );
+        })()}
+
       {screen.name === 'duelSelect' && (
         <DuelSelectScreen
           onFight={(songId, difficulty, enemyId) => dispatch({ type: 'START_DUEL', songId, difficulty, enemyId })}
@@ -258,26 +335,32 @@ export default function App() {
         />
       )}
 
-      {screen.name === 'duel' && (
-        <DuelScreen
-          key={screen.attempt}
-          songId={screen.songId}
-          difficulty={screen.difficulty}
-          enemyId={screen.enemyId}
-          matchScore={screen.matchScore}
-          onExit={goDuelSelect}
-          onAdvance={(matchScore) =>
-            dispatch({
-              type: 'START_DUEL',
-              // A fresh random song each round, same as picking "Fight" again from the ladder.
-              songId: songs[Math.floor(Math.random() * songs.length)].id,
-              difficulty: screen.difficulty,
-              enemyId: screen.enemyId,
-              matchScore,
-            })
-          }
-        />
-      )}
+      {screen.name === 'duel' &&
+        (() => {
+          const enemy = getEnemyById(screen.enemyId);
+          if (!enemy) return null;
+          return (
+            <DuelScreen
+              key={screen.attempt}
+              songId={screen.songId}
+              difficulty={screen.difficulty}
+              opponent={enemy}
+              matchScore={screen.matchScore}
+              onExit={goDuelSelect}
+              onWin={recordDuelWin}
+              onAdvance={(matchScore) =>
+                dispatch({
+                  type: 'START_DUEL',
+                  // A fresh random song each round, same as picking "Fight" again from the ladder.
+                  songId: songs[Math.floor(Math.random() * songs.length)].id,
+                  difficulty: screen.difficulty,
+                  enemyId: screen.enemyId,
+                  matchScore,
+                })
+              }
+            />
+          );
+        })()}
 
       {screen.name === 'songSelect' && (
         <SongSelectScreen
