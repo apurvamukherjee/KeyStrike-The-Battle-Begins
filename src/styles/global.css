@@ -130,6 +130,19 @@ a {
   overflow-x: hidden;
 }
 
+/* When a screen's content is taller than the viewport, plain `center`
+   anchors the overflow symmetrically above AND below — the page loads
+   scrolled to the middle of the content with the top (and the way back to
+   it) effectively unreachable in some browsers. `safe center` keeps the
+   centered look on screens that fit, but falls back to start-alignment
+   (scrollable from the top, like a normal page) the moment content
+   overflows. Kept as a second declaration, not a replacement: a browser
+   that can't parse `safe` treats the whole line as invalid and ignores it,
+   leaving the plain `center` above in effect — never a broken layout. */
+.screen {
+  justify-content: safe center;
+}
+
 @keyframes screen-in {
   from {
     opacity: 0;

@@ -10,6 +10,30 @@
   gap: 0.75rem;
 }
 
+/* Character and Sword stay stacked (one column) up through tablet widths —
+   there isn't room to halve them without squeezing the tile grids down to
+   an unreadable size. On wide viewports (desktop, landscape tablet) they
+   sit side by side, using the extra horizontal space instead of just
+   making the page taller. */
+.customize__loadout {
+  width: min(34rem, 100%);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .customize__loadout {
+    width: min(64rem, 100%);
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .customize__loadout .customize__panel {
+    width: 100%;
+  }
+}
+
 .customize__name-label {
   font-size: 0.75rem;
   font-weight: 700;

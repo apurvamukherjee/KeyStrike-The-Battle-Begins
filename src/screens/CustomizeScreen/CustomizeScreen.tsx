@@ -67,66 +67,69 @@ export default function CustomizeScreen({ onBack }: CustomizeScreenProps) {
           maxLength={16}
           autoComplete="off"
           spellCheck={false}
+          autoFocus
           onChange={(e) => handleNameChange(e.target.value)}
         />
       </div>
 
-      <div className="panel customize__panel">
-        <h2 className="customize__section-title">Character</h2>
-        <div className="customize__grid" role="listbox" aria-label="Character">
-          {CHARACTERS.map((c) => {
-            const unlocked = isCharacterUnlocked(c.id);
-            const selected = c.id === profile.characterId;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                aria-disabled={!unlocked}
-                className={`customize__tile${selected ? ' customize__tile--selected' : ''}${!unlocked ? ' customize__tile--locked' : ''}`}
-                onClick={() => handlePickCharacter(c.id)}
-              >
-                <Swordsman index={c.swordsmanIndex} className="swordsman--thumb" />
-                <span className="customize__tile-name">{unlocked ? c.name : '???'}</span>
-                <span className="customize__tile-meta">{unlocked ? '' : `Lv ${c.unlockLevel}`}</span>
-              </button>
-            );
-          })}
+      <div className="customize__loadout">
+        <div className="panel customize__panel">
+          <h2 className="customize__section-title">Character</h2>
+          <div className="customize__grid" role="listbox" aria-label="Character">
+            {CHARACTERS.map((c) => {
+              const unlocked = isCharacterUnlocked(c.id);
+              const selected = c.id === profile.characterId;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  aria-disabled={!unlocked}
+                  className={`customize__tile${selected ? ' customize__tile--selected' : ''}${!unlocked ? ' customize__tile--locked' : ''}`}
+                  onClick={() => handlePickCharacter(c.id)}
+                >
+                  <Swordsman index={c.swordsmanIndex} className="swordsman--thumb" />
+                  <span className="customize__tile-name">{unlocked ? c.name : '???'}</span>
+                  <span className="customize__tile-meta">{unlocked ? '' : `Lv ${c.unlockLevel}`}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div className="panel customize__panel">
-        <h2 className="customize__section-title">Sword</h2>
-        <div className="customize__grid" role="listbox" aria-label="Sword">
-          {SWORDS.map((s) => {
-            const unlocked = isSwordUnlocked(s.id);
-            const selected = s.id === profile.swordId;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                aria-disabled={!unlocked}
-                className={`customize__tile${selected ? ' customize__tile--selected' : ''}${!unlocked ? ' customize__tile--locked' : ''}`}
-                onClick={() => handlePickSword(s.id)}
-              >
-                <span
-                  className="customize__sword-swatch"
-                  style={{ background: s.blade, boxShadow: `0 0 12px ${s.glow}` }}
-                  aria-hidden="true"
-                />
-                <span className="customize__tile-name">{unlocked ? s.name : '???'}</span>
-                <span className="customize__tile-meta">{unlocked ? '' : `Lv ${s.unlockLevel}`}</span>
-              </button>
-            );
-          })}
+        <div className="panel customize__panel">
+          <h2 className="customize__section-title">Sword</h2>
+          <div className="customize__grid" role="listbox" aria-label="Sword">
+            {SWORDS.map((s) => {
+              const unlocked = isSwordUnlocked(s.id);
+              const selected = s.id === profile.swordId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  aria-disabled={!unlocked}
+                  className={`customize__tile${selected ? ' customize__tile--selected' : ''}${!unlocked ? ' customize__tile--locked' : ''}`}
+                  onClick={() => handlePickSword(s.id)}
+                >
+                  <span
+                    className="customize__sword-swatch"
+                    style={{ background: s.blade, boxShadow: `0 0 12px ${s.glow}` }}
+                    aria-hidden="true"
+                  />
+                  <span className="customize__tile-name">{unlocked ? s.name : '???'}</span>
+                  <span className="customize__tile-meta">{unlocked ? '' : `Lv ${s.unlockLevel}`}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       <div className="cap-row">
-        <button type="button" className="cap cap--primary" onClick={onBack} autoFocus>
+        <button type="button" className="cap cap--primary" onClick={onBack}>
           Back
         </button>
       </div>
