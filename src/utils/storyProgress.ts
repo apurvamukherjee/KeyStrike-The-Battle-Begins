@@ -1,6 +1,5 @@
 import { getStoryLevel, TOTAL_STORY_LEVELS } from '../data/storyLevels';
-
-const STORAGE_KEY = 'keystrike:storyProgress:v1';
+import { createJsonStore } from './jsonStore';
 
 interface StoryProgress {
   highestLevelCleared: number;
@@ -8,27 +7,14 @@ interface StoryProgress {
   rewardsClaimed: string[];
 }
 
-const DEFAULT_PROGRESS: StoryProgress = { highestLevelCleared: 0, rewardsClaimed: [] };
-
-function readProgress(): StoryProgress {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...DEFAULT_PROGRESS, ...(JSON.parse(raw) as Partial<StoryProgress>) } : DEFAULT_PROGRESS;
-  } catch {
-    return DEFAULT_PROGRESS;
-  }
-}
-
-function writeProgress(progress: StoryProgress) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch {
-    /* private mode / quota exceeded — progress just won't persist this session */
-  }
-}
+const store = createJsonStore<StoryProgress>(
+  'keystrike:storyProgress:v1',
+  () => ({ highestLevelCleared: 0, rewardsClaimed: [] }),
+  { merge: true },
+);
 
 export function getHighestStoryLevelCleared(): number {
-  return readProgress().highestLevelCleared;
+  return store.read().highestLevelCleared;
 }
 
 /** Level 1 is always open; every other level needs the previous one cleared. */
@@ -38,12 +24,12 @@ export function isStoryLevelUnlocked(level: number): boolean {
 }
 
 export function hasStoryReward(id: string): boolean {
-  return readProgress().rewardsClaimed.includes(id);
+  return store.read().rewardsClaimed.includes(id);
 }
 
 /** Records a level clear and grants its reward (if any and not already claimed) — a no-op re-clear of an already-beaten level still no-ops safely. */
 export function recordStoryLevelClear(level: number): void {
-  const progress = readProgress();
+  const progress = store.read();
   progress.highestLevelCleared = Math.max(progress.highestLevelCleared, Math.min(level, TOTAL_STORY_LEVELS));
 
   const unlocks = getStoryLevel(level)?.unlocks;
@@ -51,5 +37,5 @@ export function recordStoryLevelClear(level: number): void {
   if (rewardId && !progress.rewardsClaimed.includes(rewardId)) {
     progress.rewardsClaimed.push(rewardId);
   }
-  writeProgress(progress);
+  store.write(progress);
 }

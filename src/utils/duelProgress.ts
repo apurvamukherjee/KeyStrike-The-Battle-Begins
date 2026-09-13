@@ -1,38 +1,22 @@
 import { ENEMIES } from '../data/enemies';
-
-const STORAGE_KEY = 'keystrike:duelProgress:v1';
+import { createJsonStore } from './jsonStore';
 
 interface DuelProgress {
   /** Enemy ids the player has beaten at least once. */
   defeated: string[];
 }
 
-function readAll(): DuelProgress {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as DuelProgress) : { defeated: [] };
-  } catch {
-    return { defeated: [] };
-  }
-}
-
-function writeAll(progress: DuelProgress) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch {
-    /* private mode / quota exceeded — progress just won't persist this session */
-  }
-}
+const store = createJsonStore<DuelProgress>('keystrike:duelProgress:v1', () => ({ defeated: [] }));
 
 export function getDefeatedEnemyIds(): string[] {
-  return readAll().defeated;
+  return store.read().defeated;
 }
 
 export function recordDuelWin(enemyId: string): void {
-  const progress = readAll();
+  const progress = store.read();
   if (!progress.defeated.includes(enemyId)) {
     progress.defeated.push(enemyId);
-    writeAll(progress);
+    store.write(progress);
   }
 }
 

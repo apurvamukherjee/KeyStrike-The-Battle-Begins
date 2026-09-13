@@ -1,6 +1,5 @@
 import type { Difficulty } from '../types/song';
-
-const STORAGE_KEY = 'keystrike:bestScores:v2';
+import { createJsonStore, songDifficultyKey } from './jsonStore';
 
 export interface BestRecord {
   score: number;
@@ -10,39 +9,20 @@ export interface BestRecord {
 
 type BestScores = Record<string, BestRecord>;
 
-function keyFor(songId: string, difficulty: Difficulty): string {
-  return `${songId}:${difficulty}`;
-}
-
-function readAll(): BestScores {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as BestScores) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeAll(all: BestScores) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    /* private mode / quota exceeded — best score just won't persist this session */
-  }
-}
+const store = createJsonStore<BestScores>('keystrike:bestScores:v2', () => ({}));
 
 export function getBestScore(songId: string, difficulty: Difficulty): BestRecord | undefined {
-  return readAll()[keyFor(songId, difficulty)];
+  return store.read()[songDifficultyKey(songId, difficulty)];
 }
 
 /** Stores the record if it beats the existing best for this song+difficulty. Returns whether it was a new best. */
 export function recordScoreIfBest(songId: string, difficulty: Difficulty, record: BestRecord): boolean {
-  const all = readAll();
-  const key = keyFor(songId, difficulty);
+  const all = store.read();
+  const key = songDifficultyKey(songId, difficulty);
   const prev = all[key];
   if (!prev || record.score > prev.score) {
     all[key] = record;
-    writeAll(all);
+    store.write(all);
     return true;
   }
   return false;
