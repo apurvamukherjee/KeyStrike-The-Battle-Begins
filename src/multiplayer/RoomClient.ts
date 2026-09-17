@@ -12,7 +12,22 @@ import type {
   WordStruckEvent,
 } from './types';
 
+/**
+ * The battle relay's address. Set VITE_BATTLE_SERVER_URL at build time (see
+ * server/README.md); the localhost fallback is for local development only.
+ *
+ * A production build that falls back to localhost can't reach a relay at all —
+ * and on an HTTPS page the browser blocks the insecure ws:// upgrade outright —
+ * so that combination is surfaced rather than left to fail as an unexplained
+ * hang on the lobby screen.
+ */
 const SERVER_URL = (import.meta.env.VITE_BATTLE_SERVER_URL as string | undefined) || 'http://localhost:8787';
+
+export const BATTLE_SERVER_URL = SERVER_URL;
+
+/** True when multiplayer cannot work in this build, so the UI can say so up front. */
+export const BATTLE_SERVER_UNCONFIGURED =
+  import.meta.env.PROD && !import.meta.env.VITE_BATTLE_SERVER_URL;
 
 /** Thin typed wrapper around the socket.io connection to the battle server. */
 export class RoomClient {

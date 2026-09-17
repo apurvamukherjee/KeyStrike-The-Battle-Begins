@@ -2,8 +2,10 @@ import { useRef } from 'react';
 import { usePetals } from '../DuelArena/usePetals';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import Swordsman from '../Swordsman/Swordsman';
+import Swordsman, { SWORDSMAN_PART } from '../Swordsman/Swordsman';
 import type { DuelStrike } from '../DuelArena/DuelArena';
+import { pickAttack } from '../DuelArena/attacks';
+import { resetFighter } from '../DuelArena/strikeTimeline';
 import { prefersReducedMotion } from '../../utils/motion';
 import '../DuelArena/duelBackdrop.css';
 import './DuelArenaFFA.css';
@@ -30,15 +32,18 @@ const REST_ANGLE = -34;
  * The 3-4 fighter sibling to DuelArena (which is built entirely around a
  * fixed mirrored left/right pair — a shape that can't stretch to a variable
  * arc of independents without tangling every GSAP calculation in
- * conditionals). Backdrop markup/CSS is intentionally duplicated rather than
- * shared, since there's no existing shared "arena backdrop" piece to factor
- * it into. Strikes swing/flash in place — no lunge/knockback vector, since
- * there's no fixed opposite side to lunge toward the way 1v1/2v2 have.
+ * conditionals). The night-dojo scenery comes from the shared
+ * DuelArena/duelBackdrop.css, and strikes use the same typing-driven attack
+ * set — but swung in place, since there's no fixed opposite side to lunge
+ * toward the way 1v1/2v2 have.
  */
 export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
   const scopeRef = useRef<HTMLDivElement>(null);
   const bodyRefs = useRef(new Map<string, SVGSVGElement>());
   const swordRefs = useRef(new Map<string, SVGGElement>());
+  // In-flight strike per fighter — a new one cancels the old rather than
+  // letting two timelines fight over the same limbs (see DuelArena).
+  const activeStrikes = useRef(new Map<string, gsap.core.Timeline>());
 
   const petals = usePetals();
 
@@ -61,10 +66,9 @@ export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
     { scope: scopeRef, dependencies: [fighters.length] },
   );
 
-  // One strike: the attacker's blade swings in place; at the swing's apex the
-  // defender flashes and gives a small in-place recoil wobble, and the whole
-  // arena shakes — the same primitives DuelArena uses, just without a
-  // lunge/knockback vector between two arbitrary lineup positions.
+  // One strike: the same typing-driven attack set as 1v1/2v2 (see attacks.ts),
+  // but swung in place — there's no fixed opposite side to lunge toward, so the
+  // spec's lunge is spent on a short step-and-return rather than a charge.
   useGSAP(
     () => {
       if (!strike) return;
@@ -74,33 +78,108 @@ export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
       if (!atkSword || !atkBody) return;
 
       const reduce = prefersReducedMotion();
+      const spec = pickAttack(strike.judgement, strike.combo ?? 0, strike.seq);
       const t = reduce ? 0.01 : 1;
+      const windup = spec.windup * t;
+      const travel = spec.travel * t;
 
-      gsap
-        .timeline()
-        .to(atkSword, { rotation: REST_ANGLE - 46, duration: 0.11 * t, ease: 'power1.out' }, 0)
-        .to(atkSword, { rotation: REST_ANGLE + 96, duration: 0.13 * t, ease: 'power4.in' }, 0.11 * t)
-        .call(
-          () => {
-            if (defBody) {
-              defBody.classList.remove('swordsman--hit-flash');
-              void defBody.getBoundingClientRect();
-              defBody.classList.add('swordsman--hit-flash');
-              gsap
-                .timeline()
-                .to(defBody, { rotation: -6, duration: reduce ? 0.01 : 0.07, ease: 'power4.out' })
-                .to(defBody, { rotation: 0, duration: reduce ? 0.01 : 0.32, ease: 'elastic.out(1, 0.5)' });
-            }
-            if (scopeRef.current) {
-              scopeRef.current.classList.remove('duel-backdrop--shake');
+      const arm = atkBody.querySelector<SVGGraphicsElement>(`.${SWORDSMAN_PART.swordArm}`);
+      const torso = atkBody.querySelector<SVGGraphicsElement>(`.${SWORDSMAN_PART.torso}`);
+      const hair = atkBody.querySelector<SVGGraphicsElement>(`.${SWORDSMAN_PART.hair}`);
+      const sash = atkBody.querySelector<SVGGraphicsElement>(`.${SWORDSMAN_PART.sash}`);
+      const trail = atkSword.querySelector<SVGPathElement>(`.${SWORDSMAN_PART.trail}`);
+      const cloth = [hair, sash].filter(Boolean);
+
+      const inFlight = activeStrikes.current.get(strike.strikerId);
+      if (inFlight) {
+        inFlight.kill();
+        resetFighter(atkBody, atkSword, REST_ANGLE);
+      }
+
+      const tl = gsap.timeline();
+      activeStrikes.current.set(strike.strikerId, tl);
+
+      tl.to(atkSword, { rotation: REST_ANGLE + spec.windupRotation, duration: windup, ease: 'power2.out' }, 0);
+      if (!reduce) {
+        tl.to(arm, { rotation: -spec.armRotation * 0.5, duration: windup, ease: 'power2.out' }, 0)
+          .to(torso, { rotation: -5, duration: windup, ease: 'power2.out' }, 0)
+          .to(cloth, { rotation: 14, duration: windup, ease: 'power2.out' }, 0);
+      }
+
+      tl.to(atkSword, { rotation: REST_ANGLE + spec.strikeRotation, duration: travel, ease: 'power4.in' }, windup)
+        // A brace forward rather than a lunge, scaled to the attack's reach.
+        .to(atkBody, { x: spec.lunge * 0.18, duration: travel, ease: 'power4.in' }, windup);
+      if (!reduce) {
+        tl.to(arm, { rotation: spec.armRotation, duration: travel, ease: 'power4.in' }, windup)
+          .to(torso, { rotation: 8, duration: travel, ease: 'power3.in' }, windup)
+          .to(cloth, { rotation: -24, duration: travel, ease: 'power3.in' }, windup);
+        if (trail) {
+          tl.to(trail, { opacity: 0.85, duration: travel * 0.6, ease: 'power2.in' }, windup).to(
+            trail,
+            { opacity: 0, duration: 0.18, ease: 'power2.out' },
+            windup + travel + spec.hitstop,
+          );
+        }
+      }
+
+      const contact = windup + travel;
+      tl.call(
+        () => {
+          if (defBody) {
+            defBody.classList.remove('swordsman--hit-flash');
+            void defBody.getBoundingClientRect();
+            defBody.classList.add('swordsman--hit-flash');
+          }
+          if (scopeRef.current) {
+            scopeRef.current.style.setProperty('--shake-weight', String(spec.weight));
+            scopeRef.current.classList.remove('duel-backdrop--shake');
+            void scopeRef.current.offsetWidth;
+            scopeRef.current.classList.add('duel-backdrop--shake');
+            if (!reduce && spec.flash) {
+              scopeRef.current.classList.remove('duel-backdrop--flash');
               void scopeRef.current.offsetWidth;
-              scopeRef.current.classList.add('duel-backdrop--shake');
+              scopeRef.current.classList.add('duel-backdrop--flash');
             }
+          }
+        },
+        undefined,
+        contact,
+      );
+
+      // On this timeline, not a nested one built inside the callback above —
+      // nested timelines escape useGSAP's cleanup and outlive the arena.
+      if (defBody) {
+        tl.to(defBody, { rotation: -6 * spec.weight, duration: reduce ? 0.01 : 0.07, ease: 'power4.out' }, contact).to(
+          defBody,
+          { rotation: 0, duration: reduce ? 0.01 : 0.32, ease: 'elastic.out(1, 0.5)' },
+          contact + (reduce ? 0.01 : 0.07),
+        );
+      }
+
+      // A real freeze-frame: pausing the timeline is what holds the pose. An
+      // empty placeholder tween would pad the schedule while motion continued.
+      const hitstop = reduce ? 0 : spec.hitstop;
+      if (hitstop > 0) {
+        tl.call(
+          () => {
+            tl.pause();
+            gsap.delayedCall(hitstop, () => tl.resume());
           },
           undefined,
-          0.22 * t,
-        )
-        .to(atkSword, { rotation: REST_ANGLE, duration: 0.34 * t, ease: 'power2.out' }, 0.26 * t);
+          contact,
+        );
+      }
+
+      const recover = contact + (reduce ? 0.01 : 0.06);
+      const recoverDur = reduce ? 0.01 : 0.36;
+      tl.to(atkSword, { rotation: REST_ANGLE, duration: recoverDur, ease: 'power2.out' }, recover).to(
+        atkBody,
+        { x: 0, duration: recoverDur, ease: 'power2.out' },
+        recover,
+      );
+      if (!reduce) {
+        tl.to([arm, torso, ...cloth], { rotation: 0, duration: recoverDur, ease: 'power2.out' }, recover);
+      }
     },
     { scope: scopeRef, dependencies: [strike?.seq] },
   );

@@ -122,4 +122,30 @@ KeyStrike runs entirely in the browser, on desktop or mobile.
 
 ---
 
+## Deploying
+
+The frontend is a static bundle — `npm run build` writes `dist/`, and
+`vercel.json` already sets the build command, output directory and the cache
+headers a PWA needs (hashed assets immutable; `sw.js`, `index.html` and the
+manifest always revalidated, so an update reaches players on their next visit).
+Routing is hash-based, so no rewrite rules are required.
+
+**Set `VITE_BATTLE_SERVER_URL` before building** if you want online play. It is
+a build-time variable, so it must be set in the host's environment settings and
+the project rebuilt — setting it after a deploy changes nothing until the next
+build. Point it at the relay from `server/` (see `server/render.yaml`), over
+`https://`: a page served over HTTPS cannot open an insecure socket.
+
+Without it, a production build disables the online-play buttons and says so on
+the Lobby screen rather than hanging on a connection that cannot succeed. Every
+other mode — Story, Duel, Practice, Sentences, Paragraphs, Endless — is fully
+offline and needs no server.
+
+```bash
+npm run verify   # typecheck + lint + CSS class audit + tests
+npm run build    # production bundle
+```
+
+---
+
 Created by Apurva · MIT Licensed — see [LICENSE](LICENSE).

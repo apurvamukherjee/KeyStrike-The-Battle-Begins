@@ -21,6 +21,7 @@ import BattleResultsScreen from './screens/BattleResultsScreen/BattleResultsScre
 import DuelSelectScreen from './screens/DuelSelectScreen/DuelSelectScreen';
 import DuelScreen from './screens/DuelScreen/DuelScreen';
 import StoryLadderScreen from './screens/StoryLadderScreen/StoryLadderScreen';
+import StoryDialog from './components/StoryDialog/StoryDialog';
 import FullscreenButton from './components/FullscreenButton/FullscreenButton';
 import type { EndlessRunResult, ParagraphRunResult, RunResult, ScreenState, SentenceRunResult } from './types/game';
 import type { Difficulty } from './types/song';
@@ -33,6 +34,9 @@ import { getEnemyById } from './data/enemies';
 import { recordDuelWin } from './utils/duelProgress';
 import { getStoryLevel, TOTAL_STORY_LEVELS } from './data/storyLevels';
 import { recordStoryLevelClear } from './utils/storyProgress';
+import { getLevelScript } from './data/storyScript';
+import { getProfile } from './utils/profile';
+import { CHARACTERS } from './data/characters';
 import { songs } from './data/songs';
 
 type Action =
@@ -63,6 +67,7 @@ type Action =
   | { type: 'GO_CUSTOMIZE' }
   | { type: 'GO_STORY_LADDER' }
   | { type: 'START_STORY'; level: number; songId: string }
+  | { type: 'SET_STORY_PHASE'; phase: 'intro' | 'fight' | 'outro' }
   | { type: 'ENTER_ROOM'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE'; client: RoomClient; room: RoomState }
   | { type: 'ENTER_BATTLE_RESULTS'; client: RoomClient; room: RoomState };
@@ -128,7 +133,12 @@ function reducer(state: ScreenState, action: Action): ScreenState {
         difficulty: 'normal',
         attempt: Date.now(),
         matchScore: { you: 0, enemy: 0 },
+        phase: 'intro',
       };
+    case 'SET_STORY_PHASE':
+      // Guarded so a stray phase change can't resurrect a story screen the
+      // player has already navigated away from.
+      return state.name === 'story' ? { ...state, phase: action.phase } : state;
     case 'ENTER_ROOM':
       return { name: 'room', client: action.client, room: action.room };
     case 'ENTER_BATTLE':
@@ -292,6 +302,50 @@ export default function App() {
         (() => {
           const storyLevel = getStoryLevel(screen.level);
           if (!storyLevel) return null;
+
+          // Story beats bracket the fight: the scene on the way in, and — only
+          // on a win — the scene on the way out. See data/storyScript.ts.
+          if (screen.phase !== 'fight') {
+            const script = getLevelScript(screen.level);
+            const lines = screen.phase === 'intro' ? script.before : script.after;
+            const profile = getProfile();
+            const heroCharacter = CHARACTERS.find((c) => c.id === profile.characterId) ?? CHARACTERS[0];
+            const isIntro = screen.phase === 'intro';
+
+            // Every level has both scenes (asserted in storyScript.test.ts), so
+            // this is belt-and-braces for hand-edited script data. Rendering a
+            // dismissible line is safe; dispatching here would be a state
+            // update during render.
+            const safeLines =
+              lines.length > 0 ? lines : [{ speaker: 'narrator' as const, text: isIntro ? '…' : 'Victory.' }];
+
+            return (
+              <StoryDialog
+                key={`${screen.level}-${screen.phase}-${screen.attempt}`}
+                lines={safeLines}
+                hero={{ name: profile.name || 'You', swordsmanIndex: heroCharacter.swordsmanIndex }}
+                enemy={{ name: storyLevel.name, swordsmanIndex: storyLevel.swordsmanIndex }}
+                onDone={() => {
+                  if (isIntro) {
+                    dispatch({ type: 'SET_STORY_PHASE', phase: 'fight' });
+                    return;
+                  }
+                  // Outro done: on to the next level, or back to the ladder
+                  // after the final one.
+                  if (screen.level >= TOTAL_STORY_LEVELS) {
+                    goStoryLadder();
+                    return;
+                  }
+                  dispatch({
+                    type: 'START_STORY',
+                    level: screen.level + 1,
+                    songId: songs[Math.floor(Math.random() * songs.length)].id,
+                  });
+                }}
+              />
+            );
+          }
+
           return (
             <DuelScreen
               key={screen.attempt}
@@ -313,13 +367,16 @@ export default function App() {
                 // (above), captured here and reset for the next attempt.
                 const won = storyWonRef.current;
                 storyWonRef.current = false;
-                if (won && screen.level >= TOTAL_STORY_LEVELS) {
-                  goStoryLadder();
+                if (won) {
+                  // The post-fight scene advances to the next level itself, so
+                  // a win hands off to 'outro' rather than routing onward here.
+                  dispatch({ type: 'SET_STORY_PHASE', phase: 'outro' });
                   return;
                 }
+                // A loss replays the level from its opening scene.
                 dispatch({
                   type: 'START_STORY',
-                  level: won ? screen.level + 1 : screen.level,
+                  level: screen.level,
                   songId: songs[Math.floor(Math.random() * songs.length)].id,
                 });
               }}

@@ -128,7 +128,13 @@
   }
 }
 
-/* Shared shake, applied by whichever arena is taking the hit. */
+/* Shared shake, applied by whichever arena is taking the hit. Amplitude scales
+   with the attack's weight (set by strikeTimeline), so a light slash nudges the
+   frame and a finisher rocks it. */
+.duel-backdrop {
+  --shake-weight: 0.6;
+}
+
 .duel-backdrop--shake {
   animation: duel-arena-shake 260ms ease-out;
 }
@@ -139,29 +145,56 @@
     transform: translate(0, 0);
   }
   20% {
-    transform: translate(-6px, 3px);
+    transform: translate(calc(-6px * var(--shake-weight)), calc(3px * var(--shake-weight)));
   }
   40% {
-    transform: translate(5px, -3px);
+    transform: translate(calc(5px * var(--shake-weight)), calc(-3px * var(--shake-weight)));
   }
   60% {
-    transform: translate(-4px, 2px);
+    transform: translate(calc(-4px * var(--shake-weight)), calc(2px * var(--shake-weight)));
   }
   80% {
-    transform: translate(3px, -2px);
+    transform: translate(calc(3px * var(--shake-weight)), calc(-2px * var(--shake-weight)));
+  }
+}
+
+/* Finisher only: a full-arena impact flash. */
+.duel-backdrop--flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  animation: duel-arena-flash 320ms ease-out;
+}
+
+@keyframes duel-arena-flash {
+  0% {
+    background: var(--red-wash);
+    opacity: 0;
+  }
+  14% {
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 1;
+  }
+  100% {
+    background: transparent;
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .duel-backdrop__mist,
   .duel-backdrop__petal,
-  .duel-backdrop--shake {
+  .duel-backdrop--shake,
+  .duel-backdrop--flash::after {
     animation: none !important;
   }
 }
 
 :root[data-reduce-motion='true'] .duel-backdrop__mist,
 :root[data-reduce-motion='true'] .duel-backdrop__petal,
-:root[data-reduce-motion='true'] .duel-backdrop--shake {
+:root[data-reduce-motion='true'] .duel-backdrop--shake,
+:root[data-reduce-motion='true'] .duel-backdrop--flash::after {
   animation: none !important;
 }

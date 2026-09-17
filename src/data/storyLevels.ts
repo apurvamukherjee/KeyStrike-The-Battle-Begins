@@ -70,9 +70,30 @@ const MILESTONES: Record<number, Omit<StoryLevel, 'level'>> = {
   },
 };
 
+/**
+ * Levels where the recurring rival stands in for an ordinary grunt (her scenes
+ * live in data/storyScript.ts). She keeps one face and one name the whole
+ * campaign, and fights a little above the curve — she is, after all, ahead of
+ * you on the same road.
+ */
+export const RIVAL_LEVELS = new Set([7, 18, 28, 38, 48]);
+export const RIVAL_SWORDSMAN_INDEX = 6; // sakura
+
 function buildLevel(level: number): StoryLevel {
   const milestone = MILESTONES[level];
   if (milestone) return { level, ...milestone };
+
+  if (RIVAL_LEVELS.has(level)) {
+    return {
+      level,
+      kind: 'grunt',
+      name: 'Kaede',
+      swordsmanIndex: RIVAL_SWORDSMAN_INDEX,
+      profile: { wordsPerMinute: Math.round(curveWpm(level) * 1.12), accuracy: Math.min(0.98, curveAccuracy(level) + 0.04) },
+      flavor: 'The rival. Always one province further along than you.',
+    };
+  }
+
   return {
     level,
     kind: 'grunt',

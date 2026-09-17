@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RoomClient } from '../../multiplayer/RoomClient';
+import { BATTLE_SERVER_UNCONFIGURED, RoomClient } from '../../multiplayer/RoomClient';
 import { getOrCreateClientId, savePendingSession } from '../../multiplayer/session';
 import type { RoomState } from '../../multiplayer/types';
 import { sanitizeNickname } from '../../utils/nickname';
@@ -18,6 +18,9 @@ export default function LobbyScreen({ presetMode, onEnterRoom, onBack }: LobbySc
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
+  // Without a relay there is nothing to connect to, so the buttons would only
+  // hang until the socket timed out.
+  const offline = BATTLE_SERVER_UNCONFIGURED;
 
   async function handleCreate() {
     setError(null);
@@ -81,7 +84,7 @@ export default function LobbyScreen({ presetMode, onEnterRoom, onBack }: LobbySc
           />
         </label>
 
-        <button type="button" className="cap cap--primary lobby__wide" onClick={handleCreate} disabled={busy !== null}>
+        <button type="button" className="cap cap--primary lobby__wide" onClick={handleCreate} disabled={busy !== null || offline}>
           {busy === 'create' ? 'Creating…' : 'Create Room'}
         </button>
 
@@ -98,10 +101,16 @@ export default function LobbyScreen({ presetMode, onEnterRoom, onBack }: LobbySc
             placeholder="ABCD"
           />
         </label>
-        <button type="button" className="cap lobby__wide" onClick={handleJoin} disabled={busy !== null}>
+        <button type="button" className="cap lobby__wide" onClick={handleJoin} disabled={busy !== null || offline}>
           {busy === 'join' ? 'Joining…' : 'Join Room'}
         </button>
 
+        {BATTLE_SERVER_UNCONFIGURED && (
+          <p className="lobby__error">
+            Online play isn’t available on this build — no battle server was configured. Every other mode works
+            offline.
+          </p>
+        )}
         {error && <p className="lobby__error">{error}</p>}
       </div>
 

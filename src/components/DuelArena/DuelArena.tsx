@@ -2,9 +2,12 @@ import { useRef } from 'react';
 import { usePetals } from './usePetals';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import Swordsman from '../Swordsman/Swordsman';
+import Swordsman, { SWORDSMAN_PART } from '../Swordsman/Swordsman';
 import type { Racer } from '../RaceTrack/RaceTrack';
+import type { Judgement } from '../../types/game';
 import { prefersReducedMotion } from '../../utils/motion';
+import { pickAttack, type AttackSpec } from './attacks';
+import { playStrike, resetFighter } from './strikeTimeline';
 import './duelBackdrop.css';
 import './DuelArena.css';
 
@@ -15,6 +18,10 @@ export interface DuelStrike {
   /** FFA Duel only — which fighter got hit, so DuelArenaFFA can play their hit-flash. Unused here since 1v1/2v2 always infer "the other side." */
   targetId?: string;
   seq: number;
+  /** How the word that earned this strike was typed — picks the attack (see attacks.ts). Omitted for an opponent's swing, which falls back to the light slash. */
+  judgement?: Judgement;
+  /** Combo at the moment of the strike — at FINISHER_COMBO or above it becomes the spinning finisher. */
+  combo?: number;
 }
 
 interface DuelArenaProps {
@@ -46,34 +53,77 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
   const rightSwordRef = useRef<SVGGElement>(null);
   const leftSlashRef = useRef<HTMLDivElement>(null);
   const rightSlashRef = useRef<HTMLDivElement>(null);
+  const leftImpactRef = useRef<HTMLDivElement>(null);
+  const rightImpactRef = useRef<HTMLDivElement>(null);
 
   const bodies = { left: leftBodyRef, right: rightBodyRef };
   const swords = { left: leftSwordRef, right: rightSwordRef };
   const slashes = { left: leftSlashRef, right: rightSlashRef };
+  // Sparks spawn on the *defender's* side, where the blade actually lands.
+  const impacts = { left: leftImpactRef, right: rightImpactRef };
+  // The in-flight strike per side. At 80+ WPM a new word lands before the
+  // previous animation finishes, so the old timeline is killed and its limbs
+  // snapped back to guard — otherwise the two fight over the same properties
+  // and the fighter drifts out of pose.
+  const activeStrikes = useRef<Partial<Record<Side, gsap.core.Timeline>>>({});
+  // The idle sway tweens that share `rotation` with a strike, per side.
+  const idleSway = useRef<Partial<Record<Side, gsap.core.Tween[]>>>({});
 
   const petals = usePetals();
 
-  // Setup: mirror the right-hand fighter and start idle sway. Runs once on
-  // mount — GSAP owns the whole transform chain on these elements from here
-  // on, so nothing else (CSS or otherwise) should set their transform.
+  // Setup: mirror the right-hand fighter and start the idle breathing loop.
+  // Runs once on mount — GSAP owns the whole transform chain on these elements
+  // from here on, so nothing else (CSS or otherwise) should set their transform.
   useGSAP(
     () => {
       if (!leftBodyRef.current || !rightBodyRef.current || !leftSwordRef.current || !rightSwordRef.current) return;
       gsap.set(rightBodyRef.current, { scaleX: -1, transformOrigin: '50% 50%' });
       gsap.set([leftSwordRef.current, rightSwordRef.current], { rotation: REST_ANGLE, transformOrigin: '0px 0px' });
 
-      if (!prefersReducedMotion()) {
-        gsap.to(leftBodyRef.current, { y: -4, duration: 2.1, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-        gsap.to(rightBodyRef.current, { y: -4, duration: 2.1, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 1.05 });
+      if (prefersReducedMotion()) return;
+
+      // Idle: a slow breath plus a slight counter-sway of the blade and cloth,
+      // offset per fighter so the two never bob in lockstep.
+      for (const [side, body, delay] of [
+        ['left', leftBodyRef.current, 0],
+        ['right', rightBodyRef.current, 1.05],
+      ] as const) {
+        // Breathing stays on `y`, which no strike touches, so it runs
+        // uninterrupted for the whole fight.
+        gsap.to(body, { y: -4, duration: 2.1, repeat: -1, yoyo: true, ease: 'sine.inOut', delay });
+
+        // The cloth/torso sway shares `rotation` with every strike, so these
+        // are kept and paused while a strike plays — two tweens on the same
+        // property would drag the swing back mid-arc and leave the idle
+        // resuming from the wrong baseline.
+        const torso = body.querySelector(`.${SWORDSMAN_PART.torso}`);
+        const hair = body.querySelector(`.${SWORDSMAN_PART.hair}`);
+        const sash = body.querySelector(`.${SWORDSMAN_PART.sash}`);
+        const sway: gsap.core.Tween[] = [];
+        if (torso) {
+          sway.push(gsap.to(torso, { rotation: 1.6, duration: 2.6, repeat: -1, yoyo: true, ease: 'sine.inOut', delay }));
+        }
+        const cloth = [hair, sash].filter(Boolean);
+        if (cloth.length > 0) {
+          sway.push(
+            gsap.to(cloth, {
+              rotation: 5,
+              duration: 3.1,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+              delay: delay + 0.4,
+            }),
+          );
+        }
+        idleSway.current[side] = sway;
       }
     },
-    { scope: scopeRef }
+    { scope: scopeRef },
   );
 
-  // One strike: wind up (blade back, small step back), lunge forward while
-  // the blade swings through its arc, the impact lands at the swing's apex
-  // (flashing the screen streak and knocking the defender back), then the
-  // attacker recovers to guard.
+  // One strike, played by strikeTimeline: the attack is chosen from how the
+  // word was typed (see attacks.ts), so a clean word visibly hits harder.
   useGSAP(
     () => {
       if (!strike) return;
@@ -84,47 +134,51 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
       const atkBody = bodies[attackerKey].current;
       const atkSword = swords[attackerKey].current;
       const defBody = bodies[defenderKey].current;
-      const slashEl = slashes[attackerKey].current;
-      if (!atkBody || !atkSword || !defBody) return;
+      if (!atkBody || !atkSword || !defBody || !scopeRef.current) return;
 
-      const reduce = prefersReducedMotion();
-      const t = reduce ? 0.01 : 1;
-      const lunge = 60 * DIR[attackerKey];
-      const knockback = -16 * DIR[defenderKey];
+      const spec: AttackSpec = pickAttack(strike.judgement, strike.combo ?? 0, strike.seq);
 
-      gsap
-        .timeline()
-        .to(atkSword, { rotation: REST_ANGLE - 46, duration: 0.11 * t, ease: 'power1.out' }, 0)
-        .to(atkBody, { x: -6 * DIR[attackerKey], duration: 0.11 * t, ease: 'power1.out' }, 0)
-        .to(atkBody, { x: lunge, duration: 0.13 * t, ease: 'power4.in' }, 0.11 * t)
-        .to(atkSword, { rotation: REST_ANGLE + 96, duration: 0.13 * t, ease: 'power4.in' }, 0.11 * t)
-        .call(
-          () => {
-            if (slashEl) {
-              slashEl.classList.remove('duel-arena__slash--active');
-              void slashEl.offsetWidth;
-              slashEl.classList.add('duel-arena__slash--active');
-            }
-            defBody.classList.remove('swordsman--hit-flash');
-            void defBody.getBoundingClientRect(); // SVGElement has no offsetWidth — this is the reflow-forcing equivalent
-            defBody.classList.add('swordsman--hit-flash');
-            if (scopeRef.current) {
-              scopeRef.current.classList.remove('duel-backdrop--shake');
-              void scopeRef.current.offsetWidth;
-              scopeRef.current.classList.add('duel-backdrop--shake');
-            }
-            gsap
-              .timeline()
-              .to(defBody, { x: knockback, duration: reduce ? 0.01 : 0.07, ease: 'power4.out' })
-              .to(defBody, { x: 0, duration: reduce ? 0.01 : 0.32, ease: 'elastic.out(1, 0.5)' });
-          },
-          undefined,
-          0.22 * t
-        )
-        .to(atkBody, { x: 0, duration: 0.34 * t, ease: 'power2.out' }, 0.26 * t)
-        .to(atkSword, { rotation: REST_ANGLE, duration: 0.34 * t, ease: 'power2.out' }, 0.26 * t);
+      const inFlight = activeStrikes.current[attackerKey];
+      if (inFlight) {
+        // kill() does not fire onComplete, so the interrupted strike's resume
+        // never runs — this one's pause/resume pair takes over the same tweens.
+        inFlight.kill();
+        resetFighter(atkBody, atkSword, REST_ANGLE);
+      }
+
+      // Both fighters' sway is suspended: the attacker's limbs are driven by
+      // the strike, and the defender's by the hit reaction. Pause is
+      // idempotent, so interrupting a strike mid-pause is safe.
+      const suspended = [...(idleSway.current[attackerKey] ?? []), ...(idleSway.current[defenderKey] ?? [])];
+      for (const tween of suspended) tween.pause();
+
+      activeStrikes.current[attackerKey] = playStrike(
+        spec,
+        {
+          attacker: atkBody,
+          sword: atkSword,
+          defender: defBody,
+          arena: scopeRef.current,
+          streak: slashes[attackerKey].current,
+          impact: impacts[defenderKey].current,
+        },
+        { dir: DIR[attackerKey], restAngle: REST_ANGLE, reduceMotion: prefersReducedMotion() },
+      );
+
+      // Hand the limbs back to the idle loop once the strike settles — but only
+      // when no strike is still running on the other side, which in a fast
+      // exchange would otherwise get its own swing dragged back by the
+      // resumed sway. Tweens resume from where they paused, so the sway picks
+      // up smoothly rather than snapping to a new phase.
+      activeStrikes.current[attackerKey]?.eventCallback('onComplete', () => {
+        activeStrikes.current[attackerKey] = undefined;
+        if (activeStrikes.current[defenderKey]) return;
+        for (const side of ['left', 'right'] as const) {
+          for (const tween of idleSway.current[side] ?? []) tween.resume();
+        }
+      });
     },
-    { scope: scopeRef, dependencies: [strike?.seq] }
+    { scope: scopeRef, dependencies: [strike?.seq] },
   );
 
   const leftIsVictor = !!left?.finished;
@@ -220,6 +274,7 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
               <Swordsman index={left.members[1].avatarIndex} className="duel-arena__ally" />
             )}
             <Swordsman index={left.avatarIndex} bodyRef={leftBodyRef} swordRef={leftSwordRef} />
+            <div className="duel-arena__impact" ref={leftImpactRef} aria-hidden="true" />
           </div>
         </div>
 
@@ -239,6 +294,7 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
               <Swordsman index={right.members[1].avatarIndex} className="duel-arena__ally" />
             )}
             <Swordsman index={right.avatarIndex} bodyRef={rightBodyRef} swordRef={rightSwordRef} />
+            <div className="duel-arena__impact" ref={rightImpactRef} aria-hidden="true" />
           </div>
         </div>
       </div>

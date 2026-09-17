@@ -98,6 +98,12 @@ export type ScreenState =
       difficulty: Difficulty;
       attempt: number;
       matchScore: { you: number; enemy: number };
+      /**
+       * Where in the level we are: the pre-fight scene, the duel itself, or the
+       * post-win scene. A retry after a loss returns to 'intro', so a replayed
+       * level replays its setup rather than dropping straight into the fight.
+       */
+      phase: 'intro' | 'fight' | 'outro';
     }
   /** presetMode: set when arriving via "Duel a friend online" from the Duel Ladder, so a freshly created room auto-selects Duel mode instead of the default racing one. */
   | { name: 'lobby'; presetMode?: 'duel' }

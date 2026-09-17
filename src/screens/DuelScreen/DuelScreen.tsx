@@ -241,7 +241,7 @@ export default function DuelScreen({
         judgementSeq: h.judgementSeq + 1,
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
-        strike: strikerId ? { strikerId, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
+        strike: strikerId ? { strikerId, seq: (h.strike?.seq ?? 0) + 1, judgement, combo: runner.combo } : h.strike,
       }));
     }
 

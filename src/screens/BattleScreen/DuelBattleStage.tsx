@@ -229,7 +229,10 @@ export default function DuelBattleStage({ client, room, racers, onCarProgress, o
         milestone: hitNewMilestone ? runner.combo : h.milestone,
         milestoneSeq: hitNewMilestone ? h.milestoneSeq + 1 : h.milestoneSeq,
         heldPowerUp,
-        strike: judgement !== 'miss' ? { strikerId: myFighterId, targetId, seq: (h.strike?.seq ?? 0) + 1 } : h.strike,
+        strike:
+          judgement !== 'miss'
+            ? { strikerId: myFighterId, targetId, seq: (h.strike?.seq ?? 0) + 1, judgement, combo: runner.combo }
+            : h.strike,
       }));
     }
 

@@ -129,6 +129,9 @@
   inset: 0;
   pointer-events: none;
   opacity: 0;
+  /* Set per-attack by strikeTimeline: the blade's angle and how hard it hit. */
+  --streak-angle: -8deg;
+  --streak-weight: 0.6;
 }
 
 .duel-arena__slash--active {
@@ -141,15 +144,26 @@
   top: 30%;
   left: -10%;
   width: 120%;
-  height: 4px;
+  height: calc(3px + var(--streak-weight) * 4px);
   background: linear-gradient(90deg, transparent, var(--dj-steel) 20%, var(--red-400) 55%, transparent);
-  transform: rotate(-8deg) scaleX(0);
+  transform: rotate(var(--streak-angle)) scaleX(0);
   transform-origin: left center;
-  box-shadow: 0 0 18px 3px var(--red-glow);
+  box-shadow: 0 0 calc(12px + var(--streak-weight) * 16px) 3px var(--red-glow);
+}
+
+/* A vertical cut (overhead / rising) sweeps down the screen instead of across. */
+.duel-arena__slash--vertical::before {
+  top: -10%;
+  left: 46%;
+  width: calc(3px + var(--streak-weight) * 4px);
+  height: 120%;
+  background: linear-gradient(180deg, transparent, var(--dj-steel) 20%, var(--red-400) 55%, transparent);
+  transform: rotate(calc(var(--streak-angle) - 84deg)) scaleY(0);
+  transform-origin: center top;
 }
 
 .duel-arena__slash--right::before {
-  transform: rotate(188deg) scaleX(0);
+  transform: rotate(calc(180deg + var(--streak-angle))) scaleX(0);
   transform-origin: right center;
 }
 
@@ -161,54 +175,94 @@
   animation-name: duel-streak-cross-right;
 }
 
-@keyframes duel-streak-cross {
+.duel-arena__slash--vertical.duel-arena__slash--active::before,
+.duel-arena__slash--right.duel-arena__slash--vertical.duel-arena__slash--active::before {
+  animation-name: duel-streak-vertical;
+}
+
+@keyframes duel-streak-vertical {
   0% {
-    transform: rotate(-8deg) scaleX(0);
+    transform: rotate(calc(var(--streak-angle) - 84deg)) scaleY(0);
     opacity: 0;
   }
   18% {
     opacity: 1;
   }
   70% {
-    transform: rotate(-8deg) scaleX(1);
+    transform: rotate(calc(var(--streak-angle) - 84deg)) scaleY(1);
     opacity: 1;
   }
   100% {
-    transform: rotate(-8deg) scaleX(1);
+    transform: rotate(calc(var(--streak-angle) - 84deg)) scaleY(1);
     opacity: 0;
   }
 }
 
-@keyframes duel-streak-cross-right {
+/* Cross-cut: a second streak mirrored across the first, forming an X. Drawn on
+   ::after so it animates independently of the primary ::before streak. */
+.duel-arena__slash--double::after {
+  content: '';
+  position: absolute;
+  top: 46%;
+  left: -10%;
+  width: 120%;
+  height: calc(3px + var(--streak-weight) * 4px);
+  background: linear-gradient(90deg, transparent, var(--dj-steel) 20%, var(--red-400) 55%, transparent);
+  transform: rotate(calc(var(--streak-angle) * -1 + 18deg)) scaleX(0);
+  transform-origin: left center;
+  box-shadow: 0 0 calc(12px + var(--streak-weight) * 16px) 3px var(--red-glow);
+}
+
+.duel-arena__slash--double.duel-arena__slash--active::after {
+  animation: duel-streak-cross-second 340ms ease-out 60ms forwards;
+}
+
+@keyframes duel-streak-cross-second {
   0% {
-    transform: rotate(188deg) scaleX(0);
+    transform: rotate(calc(var(--streak-angle) * -1 + 18deg)) scaleX(0);
     opacity: 0;
   }
   18% {
     opacity: 1;
   }
   70% {
-    transform: rotate(188deg) scaleX(1);
+    transform: rotate(calc(var(--streak-angle) * -1 + 18deg)) scaleX(1);
     opacity: 1;
   }
   100% {
-    transform: rotate(188deg) scaleX(1);
+    transform: rotate(calc(var(--streak-angle) * -1 + 18deg)) scaleX(1);
     opacity: 0;
   }
 }
 
-@keyframes duel-slash-flash {
+/* Sparks: spawned by strikeTimeline at the contact point, self-removing. */
+.duel-arena__impact {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.duel-impact__sparks i {
+  position: absolute;
+  width: var(--size, 3px);
+  height: var(--size, 3px);
+  border-radius: 50%;
+  background: var(--dj-steel);
+  box-shadow: 0 0 6px 1px var(--red-glow);
+  animation: duel-spark 520ms ease-out var(--delay, 0ms) forwards;
+}
+
+@keyframes duel-spark {
   0% {
-    opacity: 0;
-    background: transparent;
-  }
-  12% {
+    transform: translate(0, 0) scale(1);
     opacity: 1;
-    background: var(--red-wash);
   }
   100% {
+    transform: translate(var(--dx, 20px), calc(var(--dy, -10px) + 26px)) scale(0.2);
     opacity: 0;
-    background: transparent;
   }
 }
 

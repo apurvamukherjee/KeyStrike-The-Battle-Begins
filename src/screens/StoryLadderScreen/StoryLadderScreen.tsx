@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { songs } from '../../data/songs';
 import { STORY_LEVELS, TOTAL_STORY_LEVELS } from '../../data/storyLevels';
 import { getHighestStoryLevelCleared, isStoryLevelUnlocked } from '../../utils/storyProgress';
+import { getActTitle, getActRange } from '../../data/storyScript';
 import Swordsman from '../../components/Swordsman/Swordsman';
 import './StoryLadderScreen.css';
 
@@ -25,6 +26,7 @@ export default function StoryLadderScreen({ onFight, onBack }: StoryLadderScreen
 
   const selected = STORY_LEVELS[index];
   const unlocked = isStoryLevelUnlocked(selected.level);
+  const actRange = getActRange(selected.level);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -56,6 +58,11 @@ export default function StoryLadderScreen({ onFight, onBack }: StoryLadderScreen
       </div>
 
       <div className="panel story-ladder__info">
+        {unlocked && (
+          <span className="story-ladder__act">
+            {getActTitle(selected.level)} · {actRange.from}–{actRange.to}
+          </span>
+        )}
         <span className="story-ladder__level-number">Level {selected.level}</span>
         <span className="story-ladder__name">{unlocked ? selected.name : '???'}</span>
         {unlocked && selected.kind !== 'grunt' && (
