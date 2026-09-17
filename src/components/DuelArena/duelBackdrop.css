@@ -1,0 +1,167 @@
+/*
+ * The night-dojo backdrop shared by DuelArena (1v1/2v2) and DuelArenaFFA
+ * (3-4 player). Only the scenery is shared — the fighter layout, plates and
+ * strike animations stay in each component's own stylesheet, since those are
+ * exactly what the two arenas do differently.
+ *
+ * The palette is decorative and local to Duel Mode, the same way
+ * RaceTrack.css's CAR_COLORS aren't derived from the shared theme tokens.
+ * Blade-flash/blood accents still route through the real --red-* tokens, so
+ * colorblind mode continues to affect them.
+ */
+.duel-backdrop {
+  --dj-night-deep: #050508;
+  --dj-night: #0d0c15;
+  --dj-night-raised: #14121e;
+  --dj-indigo: #221d3d;
+  --dj-steel: #f3f0e4;
+  --dj-gold: #cf9f4f;
+  --dj-gold-dim: #8a713f;
+
+  position: relative;
+  width: min(100%, 640px);
+  height: min(46vh, 360px);
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse 60% 45% at 78% 12%, rgba(207, 159, 79, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--dj-indigo) 0%, var(--dj-night) 46%, var(--dj-night-deep) 100%);
+}
+
+.duel-backdrop__moon {
+  position: absolute;
+  top: 8%;
+  right: 10%;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fbf6e4, var(--dj-gold) 70%, rgba(207, 159, 79, 0.15) 100%);
+  box-shadow: 0 0 60px 14px rgba(207, 159, 79, 0.25);
+}
+
+.duel-backdrop__kanji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(24vw, 200px);
+  font-weight: 800;
+  color: rgba(243, 240, 228, 0.035);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.duel-backdrop__torii {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(60%, 340px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.duel-backdrop__mist {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 12%;
+  height: 90px;
+  background: linear-gradient(180deg, transparent, rgba(243, 240, 228, 0.05) 50%, transparent);
+  filter: blur(6px);
+  animation: duel-mist-drift 26s linear infinite;
+}
+
+.duel-backdrop__mist--low {
+  bottom: 4%;
+  height: 50px;
+  animation-duration: 34s;
+  animation-direction: reverse;
+  opacity: 0.7;
+}
+
+@keyframes duel-mist-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(20%);
+  }
+}
+
+.duel-backdrop__ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+  border-top: 1px solid rgba(243, 240, 228, 0.06);
+}
+
+.duel-backdrop__petals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.duel-backdrop__petal {
+  position: absolute;
+  top: -5%;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #ffb6c8, var(--red-400));
+  border-radius: 2px 6px 2px 6px;
+  animation: duel-petal-fall linear infinite;
+}
+
+@keyframes duel-petal-fall {
+  from {
+    transform: translate3d(0, -10%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(var(--drift, 40px), 480%, 0) rotate(340deg);
+  }
+}
+
+/* Shared shake, applied by whichever arena is taking the hit. */
+.duel-backdrop--shake {
+  animation: duel-arena-shake 260ms ease-out;
+}
+
+@keyframes duel-arena-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6px, 3px);
+  }
+  40% {
+    transform: translate(5px, -3px);
+  }
+  60% {
+    transform: translate(-4px, 2px);
+  }
+  80% {
+    transform: translate(3px, -2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duel-backdrop__mist,
+  .duel-backdrop__petal,
+  .duel-backdrop--shake {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion='true'] .duel-backdrop__mist,
+:root[data-reduce-motion='true'] .duel-backdrop__petal,
+:root[data-reduce-motion='true'] .duel-backdrop--shake {
+  animation: none !important;
+}

@@ -47,8 +47,22 @@ const store = createJsonStore<LifetimeStats>(
   { merge: true },
 );
 
+/**
+ * The store's shallow merge fills in *missing* fields, but a persisted
+ * `perKey: null` (hand-edited storage, or a half-written value) survives it
+ * and would throw on the first `perKey[letter]` index. Normalizing on the way
+ * out keeps every reader — and recordKeyStats' write path — on a real object.
+ */
+function readStats(): LifetimeStats {
+  const stats = store.read();
+  if (stats.perKey === null || typeof stats.perKey !== 'object' || Array.isArray(stats.perKey)) {
+    stats.perKey = {};
+  }
+  return stats;
+}
+
 export function getStats(): LifetimeStats {
-  return store.read();
+  return readStats();
 }
 
 interface RunSummary {
@@ -59,7 +73,7 @@ interface RunSummary {
 
 /** Call once when a run (solo or practice) finishes. `longestWordCleared` should be '' if nothing was completed. */
 export function recordRun(run: RunSummary, longestWordCleared: string) {
-  const stats = store.read();
+  const stats = readStats();
   stats.totalPlays += 1;
   stats.totalWordsTyped += run.counts.perfect + run.counts.good;
   stats.totalPerfect += run.counts.perfect;
@@ -75,7 +89,7 @@ export function recordRun(run: RunSummary, longestWordCleared: string) {
 
 /** Call once when a run finishes, merging that run's per-key data into the lifetime totals. */
 export function recordKeyStats(delta: Record<string, KeyStat>): void {
-  const stats = store.read();
+  const stats = readStats();
   for (const [letter, d] of Object.entries(delta)) {
     const entry = stats.perKey[letter] ?? (stats.perKey[letter] = { presses: 0, mistakes: 0, correctLatencyMs: 0, correctCount: 0 });
     entry.presses += d.presses;
@@ -88,7 +102,7 @@ export function recordKeyStats(delta: Record<string, KeyStat>): void {
 
 /** Call once when a Sentence Mode run finishes. */
 export function recordSentenceRun(run: SentenceRunResult) {
-  const stats = store.read();
+  const stats = readStats();
   stats.totalSentenceRuns += 1;
   stats.totalCharactersTyped += run.charactersTyped;
   stats.bestComboEver = Math.max(stats.bestComboEver, run.maxCombo);

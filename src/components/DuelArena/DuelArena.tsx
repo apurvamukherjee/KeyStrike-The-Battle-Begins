@@ -1,9 +1,11 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
+import { usePetals } from './usePetals';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Swordsman from '../Swordsman/Swordsman';
 import type { Racer } from '../RaceTrack/RaceTrack';
 import { prefersReducedMotion } from '../../utils/motion';
+import './duelBackdrop.css';
 import './DuelArena.css';
 
 /** A one-shot strike to replay — bump `seq` (matching HudState's judgementSeq/milestoneSeq pattern elsewhere) to trigger it again for the same striker. */
@@ -33,8 +35,6 @@ type Side = 'left' | 'right';
 
 const REST_ANGLE = -34;
 const DIR: Record<Side, number> = { left: 1, right: -1 };
-const PETAL_COUNT = 14;
-
 
 export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps) {
   const [left, right] = racers;
@@ -51,17 +51,7 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
   const swords = { left: leftSwordRef, right: rightSwordRef };
   const slashes = { left: leftSlashRef, right: rightSlashRef };
 
-  const petals = useMemo(
-    () =>
-      Array.from({ length: PETAL_COUNT }, () => ({
-        left: Math.random() * 100,
-        drift: Math.random() * 80 - 40,
-        duration: 7 + Math.random() * 6,
-        delay: Math.random() * -12,
-        opacity: 0.4 + Math.random() * 0.5,
-      })),
-    []
-  );
+  const petals = usePetals();
 
   // Setup: mirror the right-hand fighter and start idle sway. Runs once on
   // mount — GSAP owns the whole transform chain on these elements from here
@@ -119,9 +109,9 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
             void defBody.getBoundingClientRect(); // SVGElement has no offsetWidth — this is the reflow-forcing equivalent
             defBody.classList.add('swordsman--hit-flash');
             if (scopeRef.current) {
-              scopeRef.current.classList.remove('duel-arena--shake');
+              scopeRef.current.classList.remove('duel-backdrop--shake');
               void scopeRef.current.offsetWidth;
-              scopeRef.current.classList.add('duel-arena--shake');
+              scopeRef.current.classList.add('duel-backdrop--shake');
             }
             gsap
               .timeline()
@@ -171,28 +161,28 @@ export default function DuelArena({ racers, strike, matchScore }: DuelArenaProps
   const rightHp = Math.max(0, 1 - (left.carProgress ?? 0)) * 100;
 
   return (
-    <div className="duel-arena" ref={scopeRef}>
-      <div className="duel-arena__kanji" aria-hidden="true">
+    <div className="duel-arena duel-backdrop" ref={scopeRef}>
+      <div className="duel-backdrop__kanji" aria-hidden="true">
         斬
       </div>
-      <div className="duel-arena__moon" />
+      <div className="duel-backdrop__moon" />
 
-      <svg className="duel-arena__torii" viewBox="0 0 200 90" fill="none" aria-hidden="true">
+      <svg className="duel-backdrop__torii" viewBox="0 0 200 90" fill="none" aria-hidden="true">
         <rect x="18" y="18" width="8" height="60" fill="#f3f0e4" />
         <rect x="174" y="18" width="8" height="60" fill="#f3f0e4" />
         <rect x="4" y="8" width="192" height="10" rx="2" fill="#f3f0e4" />
         <rect x="0" y="22" width="200" height="6" rx="2" fill="#f3f0e4" />
       </svg>
 
-      <div className="duel-arena__mist" />
-      <div className="duel-arena__mist duel-arena__mist--low" />
-      <div className="duel-arena__ground" />
+      <div className="duel-backdrop__mist" />
+      <div className="duel-backdrop__mist duel-backdrop__mist--low" />
+      <div className="duel-backdrop__ground" />
 
-      <div className="duel-arena__petals" aria-hidden="true">
+      <div className="duel-backdrop__petals" aria-hidden="true">
         {petals.map((p, i) => (
           <div
             key={i}
-            className="duel-arena__petal"
+            className="duel-backdrop__petal"
             style={
               {
                 left: `${p.left}%`,

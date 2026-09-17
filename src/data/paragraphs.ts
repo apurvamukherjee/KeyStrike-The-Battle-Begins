@@ -1,4 +1,5 @@
 import type { Difficulty } from '../types/song';
+import { shuffled } from '../utils/shuffle';
 
 /**
  * Paragraph bank for Paragraph Mode, grouped by the same Easy/Normal/Hard
@@ -23,15 +24,6 @@ export const PARAGRAPHS: Record<Difficulty, readonly string[]> = {
     "Entropy doesn't rush. It just never stops, which turns out to be worse — a slow, patient erosion of every edge that used to be sharp, until the whole system settles into something warm, stable, and quietly, permanently wrong.",
   ],
 };
-
-function shuffled<T>(items: readonly T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
 
 /** Picks one random paragraph from a tier. */
 export function pickParagraph(difficulty: Difficulty): string {

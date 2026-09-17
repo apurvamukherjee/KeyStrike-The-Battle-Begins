@@ -1,4 +1,5 @@
 import type { Difficulty } from '../types/song';
+import { shuffled } from '../utils/shuffle';
 
 /**
  * Sentence bank for Sentence Mode, grouped by the same Easy/Normal/Hard
@@ -38,15 +39,6 @@ export const SENTENCES: Record<Difficulty, readonly string[]> = {
     'Twilight folds over the harbor like a rumor nobody quite believes, golden and quiet and already halfway gone.',
   ],
 };
-
-function shuffled<T>(items: readonly T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
 
 /** Picks `count` sentences from a tier without repeats (cycling the shuffled bank if `count` exceeds its size). */
 export function pickSentences(difficulty: Difficulty, count: number): string[] {

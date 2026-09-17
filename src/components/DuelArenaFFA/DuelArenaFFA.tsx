@@ -1,9 +1,11 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
+import { usePetals } from '../DuelArena/usePetals';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Swordsman from '../Swordsman/Swordsman';
 import type { DuelStrike } from '../DuelArena/DuelArena';
 import { prefersReducedMotion } from '../../utils/motion';
+import '../DuelArena/duelBackdrop.css';
 import './DuelArenaFFA.css';
 
 export interface FFAFighter {
@@ -24,8 +26,6 @@ interface DuelArenaFFAProps {
 }
 
 const REST_ANGLE = -34;
-const PETAL_COUNT = 14;
-
 /**
  * The 3-4 fighter sibling to DuelArena (which is built entirely around a
  * fixed mirrored left/right pair — a shape that can't stretch to a variable
@@ -40,17 +40,7 @@ export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
   const bodyRefs = useRef(new Map<string, SVGSVGElement>());
   const swordRefs = useRef(new Map<string, SVGGElement>());
 
-  const petals = useMemo(
-    () =>
-      Array.from({ length: PETAL_COUNT }, () => ({
-        left: Math.random() * 100,
-        drift: Math.random() * 80 - 40,
-        duration: 7 + Math.random() * 6,
-        delay: Math.random() * -12,
-        opacity: 0.4 + Math.random() * 0.5,
-      })),
-    [],
-  );
+  const petals = usePetals();
 
   // Setup: sword rest angle + a gently staggered idle sway per fighter, so a
   // 3-4 person lineup doesn't bob in unison. Depends on the fighter *count*
@@ -102,9 +92,9 @@ export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
                 .to(defBody, { rotation: 0, duration: reduce ? 0.01 : 0.32, ease: 'elastic.out(1, 0.5)' });
             }
             if (scopeRef.current) {
-              scopeRef.current.classList.remove('duel-arena-ffa--shake');
+              scopeRef.current.classList.remove('duel-backdrop--shake');
               void scopeRef.current.offsetWidth;
-              scopeRef.current.classList.add('duel-arena-ffa--shake');
+              scopeRef.current.classList.add('duel-backdrop--shake');
             }
           },
           undefined,
@@ -118,28 +108,28 @@ export default function DuelArenaFFA({ fighters, strike }: DuelArenaFFAProps) {
   if (fighters.length === 0) return null;
 
   return (
-    <div className="duel-arena-ffa" ref={scopeRef}>
-      <div className="duel-arena-ffa__kanji" aria-hidden="true">
+    <div className="duel-arena-ffa duel-backdrop" ref={scopeRef}>
+      <div className="duel-backdrop__kanji" aria-hidden="true">
         乱
       </div>
-      <div className="duel-arena-ffa__moon" />
+      <div className="duel-backdrop__moon" />
 
-      <svg className="duel-arena-ffa__torii" viewBox="0 0 200 90" fill="none" aria-hidden="true">
+      <svg className="duel-backdrop__torii" viewBox="0 0 200 90" fill="none" aria-hidden="true">
         <rect x="18" y="18" width="8" height="60" fill="#f3f0e4" />
         <rect x="174" y="18" width="8" height="60" fill="#f3f0e4" />
         <rect x="4" y="8" width="192" height="10" rx="2" fill="#f3f0e4" />
         <rect x="0" y="22" width="200" height="6" rx="2" fill="#f3f0e4" />
       </svg>
 
-      <div className="duel-arena-ffa__mist" />
-      <div className="duel-arena-ffa__mist duel-arena-ffa__mist--low" />
-      <div className="duel-arena-ffa__ground" />
+      <div className="duel-backdrop__mist" />
+      <div className="duel-backdrop__mist duel-backdrop__mist--low" />
+      <div className="duel-backdrop__ground" />
 
-      <div className="duel-arena-ffa__petals" aria-hidden="true">
+      <div className="duel-backdrop__petals" aria-hidden="true">
         {petals.map((p, i) => (
           <div
             key={i}
-            className="duel-arena-ffa__petal"
+            className="duel-backdrop__petal"
             style={
               {
                 left: `${p.left}%`,
